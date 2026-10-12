@@ -1,0 +1,38 @@
+# Fault probabilities, timing, run limits and behavior weights are FROZEN before the first eval (docs/SPEC.md section 7).
+# Changing them after the first eval needs a docs/DECISIONS.md entry.
+faults:
+  F1: 0.08
+  F2: 0.08
+  F3: 0.15
+  F5: 0.05
+max_attempts: 5
+timing:
+  duplicate_request_delay: 60
+  scan_delay_min: 3600
+  scan_delay_max: 7200
+  scan_timeout: 172800
+run:
+  max_restarts: 5
+  max_events: 10000
+behavior_weights:
+  normal: 6
+  duplicate_request: 2
+  never_ships_back: 2
+carriers:
+  weights:
+    A: 4
+    B: 4
+    C: 2
+  b_label_delay: 120
+  c_scan_extra_delay: 1800
+cut2:
+  variant_weights:
+    none: 6
+    outside_window: 1
+    high_value_over_cap: 1
+    fraud_flagged: 1
+    partial_return: 1
+  early_refund_percent: 10
+  high_value_unit_price:
+    min: 20001
+    max: 40000

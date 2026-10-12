@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crashproof trace viewer</title>
+<style>
+:root {
+  --bg: #fafaf8;
+  --fg: #1c1c1a;
+  --muted: #5d5d58;
+  --line: #d6d6d0;
+  --panel: #f0f0ec;
+  --accent: #1f5f8b;
+  --fault-bg: #fde8e4;
+  --fault-fg: #8a1c0f;
+  --err-bg: #fff3cd;
+  --err-fg: #5c4400;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615;
+    --fg: #e6e6e1;
+    --muted: #a3a39c;
+    --line: #3a3a37;
+    --panel: #222220;
+    --accent: #7fb6dd;
+    --fault-bg: #3d1a15;
+    --fault-fg: #ffb3a6;
+    --err-bg: #3b3210;
+    --err-fg: #f3dd8a;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.45 system-ui, sans-serif;
+}
+h1 { font-size: 1.25rem; margin: 0 0 8px; }
+p { margin: 4px 0; }
+code, pre, .mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+.help { color: var(--muted); max-width: 70ch; }
+.drop {
+  margin: 12px 0;
+  padding: 12px;
+  border: 2px dashed var(--line);
+  background: var(--panel);
+}
+.drop.over { border-color: var(--accent); }
+button, input[type="text"] {
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+}
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.meta { margin: 8px 0; }
+.meta .label { color: var(--muted); }
+.hash { word-break: break-all; }
+.banner {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--err-bg);
+  color: var(--err-fg);
+  border: 1px solid var(--err-fg);
+}
+.banner ul { margin: 4px 0 0; padding-left: 20px; }
+.banner button { float: right; margin-left: 8px; }
+.notice { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--line); background: var(--panel); }
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0; }
+.filters label { white-space: nowrap; }
+.timeline { overflow-x: auto; border-top: 1px solid var(--line); }
+.cols, .row {
+  display: grid;
+  grid-template-columns: 4rem 8rem repeat(6, minmax(9rem, 1fr));
+  align-items: center;
+  min-width: 70rem;
+}
+.cols { color: var(--muted); border-bottom: 1px solid var(--line); font-weight: 600; }
+.cols > div, .row > div { padding: 3px 6px; }
+.row { border-bottom: 1px solid var(--line); border-left: 6px solid transparent; cursor: pointer; }
+.row:hover { background: var(--panel); }
+.row > .lane { border-left: 1px solid var(--line); display: flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 26px; }
+.row > .lane.rev { justify-content: flex-end; }
+.marker { display: inline-block; width: 10px; height: 10px; background: var(--accent); flex: none; }
+.row.fault { background: var(--fault-bg); color: var(--fault-fg); border-left: 6px solid var(--fault-fg); }
+.row.fault .marker { background: var(--fault-fg); transform: rotate(45deg); }
+.badge { font-weight: 700; border: 1px solid var(--fault-fg); padding: 0 4px; font-size: 11px; }
+.detail { margin: 0; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto; min-width: 70rem; }
+</style>
+</head>
+<body>
+<h1>Crashproof trace viewer</h1>
+<p class="help">Load a replay file written by <code>make replay SEED=1 RUNTIME=naive</code>
+(results/replay/seed-N-RUNTIME.jsonl). The file is read locally in this page and is never uploaded.
+All figures come from a simulation.</p>
+
+<div class="drop" id="drop">
+  <label for="picker">Choose a replay file</label>
+  <input type="file" id="picker" accept=".jsonl,.json,.txt">
+  <span class="help">or drop it anywhere on this page</span>
+</div>
+
+<div id="banner"></div>
+<div class="meta" id="meta" hidden>
+  <div><span class="label">File:</span> <span id="fname" class="mono"></span>
+    (<span id="fsize"></span> bytes)</div>
+  <div id="summary"></div>
+  <div class="hash"><span class="label">SHA-256 of file (matches the trace_hash printed by make replay):</span>
+    <span id="hash" class="mono"></span></div>
+</div>
+<div id="message" class="notice" hidden></div>
+
+<div class="filters" id="filters" hidden>
+  <span id="actorBoxes"></span>
+  <label><input type="checkbox" id="faultsOnly"> Faults only</label>
+  <label>Event name <input type="text" id="nameFilter" placeholder="substring"></label>
+</div>
+<div id="cap" class="notice" hidden></div>
+
+<div class="timeline" id="timeline" hidden>
+  <div class="cols" id="cols"></div>
+  <div id="rows"></div>
+</div>
+
+<script>
+"use strict";
+(function () {
+  var ACTORS = ["agent", "runtime", "policy", "world", "fault", "human"];
+  var KEYS = ["seq", "vt", "workflow_id", "actor", "event", "data"];
+  var MAX_RENDER = 5000;
+  var MAX_ERRORS_SHOWN = 10;
+
+  var events = [];
+  var expanded = new Set();
+  var loadToken = 0;
+
+  function $(id) { return document.getElementById(id); }
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) { node.className = className; }
+    if (text !== undefined) { node.textContent = text; }
+    return node;
+  }
+
+  function formatDuration(vt) {
+    var days = Math.floor(vt / 86400);
+    var hours = Math.floor((vt % 86400) / 3600);
+    var minutes = Math.floor((vt % 3600) / 60);
+    var seconds = vt % 60;
+    var parts = [];
+    if (days > 0) { parts.push(days + "d"); }
+    if (parts.length > 0 || hours > 0) { parts.push(hours + "h"); }
+    if (parts.length > 0 || minutes > 0) { parts.push(minutes + "m"); }
+    parts.push(seconds + "s");
+    return parts.join(" ");
+  }
+
+  function isPlainObject(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+  }
+
+  // Returns null when the object is a valid event, otherwise a reason string.
+  function validate(obj) {
+    if (!isPlainObject(obj)) { return "not a JSON object"; }
+    var i;
+    for (i = 0; i < KEYS.length; i++) {
+      if (!Object.prototype.hasOwnProperty.call(obj, KEYS[i])) {
+        return "missing key " + KEYS[i];
+      }
+    }
+    var names = Object.keys(obj);
+    for (i = 0; i < names.length; i++) {
+      if (KEYS.indexOf(names[i]) < 0) { return "unexpected key " + names[i]; }
+    }
+    if (!Number.isInteger(obj.seq)) { return "seq is not an integer"; }
+    if (!Number.isInteger(obj.vt)) { return "vt is not an integer"; }
+    if (typeof obj.workflow_id !== "string") { return "workflow_id is not a string"; }
+    if (ACTORS.indexOf(obj.actor) < 0) { return "actor is not one of the six known actors"; }
+    if (typeof obj.event !== "string") { return "event is not a string"; }
+    if (!isPlainObject(obj.data)) { return "data is not an object"; }
+    return null;
+  }
+
+  function parseLines(text) {
+    var lines = text.split("\n");
+    if (lines.length > 0 && lines[lines.length - 1] === "") { lines.pop(); }
+    var good = [];
+    var errors = [];
+    lines.forEach(function (line, index) {
+      var n = index + 1;
+      var obj;
+      try {
+        obj = JSON.parse(line);
+      } catch (err) {
+        errors.push("line " + n + ": invalid JSON");
+        return;
+      }
+      var reason = validate(obj);
+      if (reason !== null) {
+        errors.push("line " + n + ": " + reason);
+        return;
+      }
+      good.push(obj);
+    });
+    return { events: good, errors: errors, lineCount: lines.length };
+  }
+
+  function isFault(ev) { return ev.event.indexOf("fault.") === 0; }
+
+  function showBanner(errors) {
+    var host = $("banner");
+    host.replaceChildren();
+    if (errors.length === 0) { return; }
+    var box = el("div", "banner");
+    var close = el("button", "", "Dismiss");
+    close.type = "button";
+    close.addEventListener("click", function () { host.replaceChildren(); });
+    box.appendChild(close);
+    box.appendChild(el("div", "", errors.length + " malformed line(s) skipped:"));
+    var list = el("ul");
+    errors.slice(0, MAX_ERRORS_SHOWN).forEach(function (msg) {
+      list.appendChild(el("li", "mono", msg));
+    });
+    if (errors.length > MAX_ERRORS_SHOWN) {
+      list.appendChild(el("li", "", "and " + (errors.length - MAX_ERRORS_SHOWN) + " more"));
+    }
+    box.appendChild(list);
+    host.appendChild(box);
+  }
+
+  function showMessage(text) {
+    var node = $("message");
+    node.textContent = text;
+    node.hidden = text === "";
+  }
+
+  function buildColumns() {
+    var cols = $("cols");
+    cols.replaceChildren();
+    cols.appendChild(el("div", "", "seq"));
+    cols.appendChild(el("div", "", "time"));
+    ACTORS.forEach(function (actor) { cols.appendChild(el("div", "", actor)); });
+  }
+
+  function buildActorBoxes() {
+    var host = $("actorBoxes");
+    host.replaceChildren();
+    ACTORS.forEach(function (actor) {
+      var label = el("label");
+      var box = document.createElement("input");
+      box.type = "checkbox";
+      box.checked = true;
+      box.value = actor;
+      box.addEventListener("change", render);
+      label.appendChild(box);
+      label.appendChild(document.createTextNode(" " + actor + "  "));
+      host.appendChild(label);
+    });
+  }
+
+  function visibleActors() {
+    var shown = new Set();
+    $("actorBoxes").querySelectorAll("input").forEach(function (box) {
+      if (box.checked) { shown.add(box.value); }
+    });
+    return shown;
+  }
+
+  function buildRow(ev, index) {
+    var item = el("div", "item");
+    var row = el("div", isFault(ev) ? "row fault" : "row");
+    row.tabIndex = 0;
+    row.setAttribute("role", "button");
+    var detail = el("pre", "detail");
+    detail.hidden = !expanded.has(index);
+    detail.textContent = JSON.stringify(ev.data, null, 2);
+    row.setAttribute("aria-expanded", String(!detail.hidden));
+
+    row.appendChild(el("div", "mono", String(ev.seq)));
+    var time = el("div", "mono", formatDuration(ev.vt));
+    time.title = "vt = " + ev.vt;
+    row.appendChild(time);
+    ACTORS.forEach(function (actor, laneIndex) {
+      var lane = el("div", laneIndex >= 4 ? "lane rev" : "lane");
+      if (actor === ev.actor) {
+        var name = el("span", "mono", ev.event);
+        var marker = el("span", "marker");
+        if (isFault(ev)) {
+          var badge = el("span", "badge", "FAULT");
+          if (laneIndex >= 4) {
+            lane.appendChild(name); lane.appendChild(badge); lane.appendChild(marker);
+          } else {
+            lane.appendChild(marker); lane.appendChild(badge); lane.appendChild(name);
+          }
+        } else if (laneIndex >= 4) {
+          lane.appendChild(name); lane.appendChild(marker);
+        } else {
+          lane.appendChild(marker); lane.appendChild(name);
+        }
+      }
+      row.appendChild(lane);
+    });
+
+    function toggle() {
+      detail.hidden = !detail.hidden;
+      row.setAttribute("aria-expanded", String(!detail.hidden));
+      if (detail.hidden) { expanded.delete(index); } else { expanded.add(index); }
+    }
+    row.addEventListener("click", toggle);
+    row.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+    });
+    item.appendChild(row);
+    item.appendChild(detail);
+    return item;
+  }
+
+  function render() {
+    var shown = visibleActors();
+    var faultsOnly = $("faultsOnly").checked;
+    var needle = $("nameFilter").value.toLowerCase();
+    var matches = [];
+    events.forEach(function (ev, index) {
+      if (!shown.has(ev.actor)) { return; }
+      if (faultsOnly && !isFault(ev)) { return; }
+      if (needle !== "" && ev.event.toLowerCase().indexOf(needle) < 0) { return; }
+      matches.push({ ev: ev, index: index });
+    });
+    var frag = document.createDocumentFragment();
+    matches.slice(0, MAX_RENDER).forEach(function (m) {
+      frag.appendChild(buildRow(m.ev, m.index));
+    });
+    $("rows").replaceChildren(frag);
+    var cap = $("cap");
+    if (matches.length > MAX_RENDER) {
+      cap.textContent = "Showing the first " + MAX_RENDER + " of " + matches.length + " matching events.";
+      cap.hidden = false;
+    } else {
+      cap.hidden = true;
+    }
+  }
+
+  function showSummary() {
+    var faults = events.filter(isFault).length;
+    var workflows = new Set(events.map(function (ev) { return ev.workflow_id; })).size;
+    $("summary").textContent = events.length + " events, " + faults + " fault events, "
+      + workflows + " workflow id(s)";
+  }
+
+  function toHex(buffer) {
+    return Array.prototype.map.call(new Uint8Array(buffer), function (b) {
+      return b.toString(16).padStart(2, "0");
+    }).join("");
+  }
+
+  function showHash(buffer, token) {
+    var out = $("hash");
+    out.textContent = "computing";
+    var subtle = window.crypto && window.crypto.subtle;
+    if (!subtle) {
+      out.textContent = "SHA-256 unavailable in this browser";
+      return;
+    }
+    subtle.digest("SHA-256", buffer).then(function (digest) {
+      if (token === loadToken) { out.textContent = toHex(digest); }
+    }, function () {
+      if (token === loadToken) { out.textContent = "SHA-256 unavailable in this browser"; }
+    });
+  }
+
+  function loadBuffer(name, buffer) {
+    loadToken += 1;
+    var token = loadToken;
+    var text = new TextDecoder("utf-8").decode(buffer);
+    var result = parseLines(text);
+    events = result.events;
+    expanded = new Set();
+    $("fname").textContent = name;
+    $("fsize").textContent = String(buffer.byteLength);
+    $("meta").hidden = false;
+    showHash(buffer, token);
+    showBanner(result.errors);
+    showSummary();
+    var hasEvents = events.length > 0;
+    $("filters").hidden = !hasEvents;
+    $("timeline").hidden = !hasEvents;
+    if (result.lineCount === 0) {
+      showMessage("This file is empty. Nothing to show.");
+    } else if (!hasEvents) {
+      showMessage("No valid trace events were found in this file. See the errors above.");
+    } else {
+      showMessage("");
+    }
+    render();
+  }
+
+  function loadFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () { loadBuffer(file.name, reader.result); };
+    reader.onerror = function () {
+      showBanner(["could not read file " + file.name]);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  buildColumns();
+  buildActorBoxes();
+  $("faultsOnly").addEventListener("change", render);
+  $("nameFilter").addEventListener("input", render);
+  $("picker").addEventListener("change", function (e) {
+    if (e.target.files.length > 0) { loadFile(e.target.files[0]); }
+  });
+  document.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    $("drop").classList.add("over");
+  });
+  document.addEventListener("dragleave", function () { $("drop").classList.remove("over"); });
+  document.addEventListener("drop", function (e) {
+    e.preventDefault();
+    $("drop").classList.remove("over");
+    if (e.dataTransfer && e.dataTransfer.files.length > 0) { loadFile(e.dataTransfer.files[0]); }
+  });
+})();
+</script>
+</body>
+</html>

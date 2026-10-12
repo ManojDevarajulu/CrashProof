@@ -1,0 +1,10 @@
+# Policy rules (docs/ARCHITECTURE.md section 4). Frozen before the Gate 2 eval.
+refund_cap: 20000
+window_days: 30
+label: [P6, P4, P5]
+refund: [P3, P1, P2]
+approver:
+  delay_min: 3600
+  delay_max: 86400
+  approve_weight: 7
+  deny_weight: 3

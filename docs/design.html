@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crashproof: design notes</title>
+<style>
+:root{--bg:#fafaf8;--ink:#1d1d1b;--mute:#6a6a64;--line:#e4e3dd;--acc:#2c4a7a;--soft:#efeee8}
+@media (prefers-color-scheme:dark){:root{--bg:#161615;--ink:#e9e8e3;--mute:#9a998f;--line:#2b2b28;--acc:#8fb0e6;--soft:#1f1f1d}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.progress{position:fixed;top:0;left:0;height:2px;width:100%;background:var(--acc);transform-origin:0 50%;transform:scaleX(0)}
+main{max-width:680px;margin:0 auto;padding:96px 24px 120px}
+.eyebrow,.num{font:12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--mute);letter-spacing:.04em}
+h1{font:400 40px/1.15 Georgia,"Times New Roman",serif;margin:16px 0 18px;letter-spacing:-.01em}
+h2{font:400 24px/1.3 Georgia,"Times New Roman",serif;margin:0 0 14px}
+.lede{color:var(--mute);margin:0}
+section{margin-top:72px;padding-top:28px;border-top:1px solid var(--line)}
+.num{display:block;margin-bottom:12px}
+p{margin:0 0 14px}
+ul{padding-left:20px;margin:0 0 14px}
+li{margin:7px 0}
+code{font:.88em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--soft);padding:1px 6px;border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:18px 0}
+th,td{text-align:left;padding:11px 14px 11px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--mute);font-size:13px}
+td:first-child{font-weight:500;white-space:nowrap}
+.bars{margin:24px 0 20px}
+.row{display:grid;grid-template-columns:84px 1fr 52px;gap:14px;align-items:center;margin:11px 0;font-size:15px}
+.track{height:8px;background:var(--soft);border-radius:4px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--acc);border-radius:4px;transition:width 900ms cubic-bezier(.2,.7,.2,1)}
+.row b{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.note{color:var(--mute);font-size:15px}
+footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--line);color:var(--mute);font-size:14px}
+a{color:var(--acc);text-decoration:none;background:linear-gradient(currentColor,currentColor) 0 100%/0 1px no-repeat;transition:background-size .25s ease}
+a:hover,a:focus-visible{background-size:100% 1px}
+.js .reveal{opacity:0;transform:translateY(10px);transition:opacity .6s ease,transform .6s ease}
+.js .reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+html{scroll-behavior:auto}
+.js .reveal{opacity:1;transform:none;transition:none}
+.fill{transition:none}
+}
+@media (max-width:520px){
+main{padding-top:64px}
+h1{font-size:32px}
+.row{grid-template-columns:70px 1fr 44px}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress" aria-hidden="true"></div>
+<main>
+
+<header class="reveal">
+<span class="eyebrow">Crashproof / design notes</span>
+<h1>Does an agent that moves money stay safe when things fail?</h1>
+<p class="lede">How the harness works, why it is built this way, and what it does not show.</p>
+</header>
+
+<section class="reveal">
+<span class="num">01</span>
+<h2>The question</h2>
+<p>I wanted to know what happens when an AI agent has to do things with real side effects, and the systems it talks to fail halfway through. Returns and refunds are a good test. Every step creates something (a label, a refund), and every step can fail after the effect has already happened.</p>
+<p>The classic failure is a refund call that succeeds, a response that gets lost, and an agent that retries. The customer is paid twice.</p>
+</section>
+
+<section class="reveal">
+<span class="num">02</span>
+<h2>How a run works</h2>
+<p>Each seed is one order and one return, driven by a single-threaded scheduler on virtual time. There is no real clock, no threads and no network, so a run is fully determined by its seed and can be replayed exactly.</p>
+<p>The world (the store, three fictional carriers, a refund service and an event bus) survives simulated crashes. The runtime and the agent are rebuilt after one, the hardened runtime from its ledger. I built this with AI coding agents working under written rules, with a cross-model review step and the invariant checks described below as the safety net. I chose the design and read every result.</p>
+</section>
+
+<section class="reveal">
+<span class="num">03</span>
+<h2>Making the comparison fair</h2>
+<p>Every runtime sees the same faults for the same logical attempt. Each fault decision uses its own random stream, keyed by the seed, the fault type, the workflow, the kind of call and which attempt it is. Runtimes make different numbers of calls, so a shared random stream would give them different luck.</p>
+<p>Four faults are injected: a timeout before the effect is applied, a timeout after it is applied (the lost response), a duplicated webhook, and a crash after the effect but before it is recorded. I specified four more (out-of-order delivery, rate limits, provider error formats, long delays) and did not build them.</p>
+</section>
+
+<section class="reveal">
+<span class="num">04</span>
+<h2>Three runtimes</h2>
+<table>
+<thead><tr><th>Runtime</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td>naive</td><td>Executes what the agent proposes. Retries only happen because the agent asks again. No keys, no ledger, no policy, no timeout.</td></tr>
+<tr><td>keyed</td><td>Naive, plus a deterministic idempotency key sent to every provider that supports one.</td></tr>
+<tr><td>hardened</td><td>Keys, a ledger, reconciliation, a policy engine with human escalation, and a scan timeout.</td></tr>
+</tbody>
+</table>
+<p>The keyed runtime exists because the obvious objection is "just use idempotency keys". It answers part of that.</p>
+</section>
+
+<section class="reveal">
+<span class="num">05</span>
+<h2>Inside the hardened runtime</h2>
+<p>The ledger records an intent before any provider call. If a call times out, the effect is marked unknown, and an unknown effect is never retried blindly. The runtime asks the provider whether it happened, by key or, for a provider that ignores keys, by reference, and acts on the answer.</p>
+<p>Before each side effect a few policy rules run: for a label, the fraud flag, the delivery window and one label per workflow; for a refund, that the return was scanned, that the amount is within what was paid, and the refund cap. A refund above the cap goes to a simulated human approver. If no return scan arrives within 48 hours, the workflow ends as scan_timeout.</p>
+</section>
+
+<section class="reveal">
+<span class="num">06</span>
+<h2>What I measured</h2>
+<p>1,000 seeds, three runtimes, nine invariants. Seeds with at least one violation:</p>
+<div class="bars" id="bars" role="img" aria-label="Seeds with a violation out of 1000: hardened 0, keyed 631, naive 747">
+<div class="row"><span>hardened</span><div class="track"><div class="fill" data-w="0"></div></div><b>0</b></div>
+<div class="row"><span>keyed</span><div class="track"><div class="fill" data-w="63.1"></div></div><b>631</b></div>
+<div class="row"><span>naive</span><div class="track"><div class="fill" data-w="74.7"></div></div><b>747</b></div>
+</div>
+<p>Keyed had no duplicate refunds and no over-refunds. It did have 112 seeds with duplicate labels, because one carrier ignores keys, plus 286 seeds with a refund issued before the return scan or for an order that was not eligible, 176 that refunded above the cap with no approval, and 160 that never finished.</p>
+<p class="note">Naive and keyed have no policy engine and no scan timeout, so their policy and liveness failures follow from what they leave out, not only from faults. Counts are seeds, not events.</p>
+</section>
+
+<section class="reveal">
+<span class="num">07</span>
+<h2>How I checked the checkers</h2>
+<p>A zero is only worth something if the invariants can see a bug. I broke the hardened runtime five ways, ran 300 seeds each, and each one was caught:</p>
+<ul>
+<li>Refund key removed: duplicate refunds in 19 seeds, and ledger mismatches in 189 seeds.</li>
+<li>Key changed on every attempt: the same, plus duplicate labels in 15 seeds.</li>
+<li>Refund cap not enforced: 46 seeds with a refund above the cap and no approval.</li>
+<li>Fraud check disabled: 32 seeds refunded an order flagged for fraud.</li>
+<li>Scan timeout removed: 34 seeds left a workflow open.</li>
+</ul>
+<p>A sixth change, skipping the final reconcile at the end of a run, changed nothing in any seed. I treat that code as a safety net the evaluation never needed. These runs were done on a throwaway branch, with an AI coding agent applying the patches. The patches are not in the repository.</p>
+</section>
+
+<section class="reveal">
+<span class="num">08</span>
+<h2>What this does not show</h2>
+<ul>
+<li>It is a simulation. The carriers are fictional and their failures are my assumptions.</li>
+<li>The agent is a deterministic script, not a language model. Nothing here measures any model.</li>
+<li>The fault rates and the scenario mix are arbitrary. Change them and the counts change.</li>
+<li>Hardened never left a workflow unfinished in these runs, but the scan timeout is what ensures that in these runs: removing it, 34 seeds left a workflow open. The end-of-run reconcile never changed an outcome in any measured seed.</li>
+<li>Policy rule P3 denied a step in 86 of the 1,000 hardened seeds, but those denials are not terminal: the workflow waits for the scan. P1 and P5 never denied in the measured seeds.</li>
+<li>For naive and keyed, the "never finished" check reads the runtime's own flag, because they have no ledger.</li>
+<li>The simulated refund service always supports idempotency keys and lookup by key; a refund provider without keys was not modelled.</li>
+<li>Crashes are injected only after an effect is applied, and execution is single-threaded; a crash between recording intent and calling the provider, and truly concurrent workers, are not modelled.</li>
+</ul>
+</section>
+
+<section class="reveal">
+<span class="num">09</span>
+<h2>Possible next steps</h2>
+<ul>
+<li>Put a real language model behind the same agent interface, with its responses recorded so runs stay replayable.</li>
+<li>Build the four skipped faults. Out-of-order delivery is the one I would expect to matter most.</li>
+<li>Run the same invariants against a provider sandbox, to see how wrong my assumptions are.</li>
+</ul>
+</section>
+
+<section class="reveal">
+<span class="num">10</span>
+<h2>Related work</h2>
+<p>This is not a new idea. Open-source tools and papers cover similar ground: simulation and fault-injection testing for tool-using agents (AgentProof, Deterministic Agent Simulator, afterstate, Eval Mock, Agent Reliability Lab), research on duplicate side effects in language-model agents under retries (the 'Where Does Exactly-Once Live?' paper and the verify-before-retry work), retry and idempotency middleware (latch-idempotent, Aura Guard), and the customer-service benchmark tau-bench, whose retail domain covers returns and refunds. The method itself, deterministic simulation testing, comes from FoundationDB and TigerBeetle. I have not compared this project against any of them. What it adds is a small, readable head-to-head of three runtime designs under identical injected faults, with a policy and escalation layer, checked by invariants that were themselves tested by breaking the system.</p>
+</section>
+
+<footer class="reveal">Figures come from <code>make eval</code> on simulated providers. Nothing here is a claim about real carriers or payment systems.</footer>
+
+</main>
+<script>
+(function(){
+document.documentElement.classList.add('js');
+var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var bars=document.getElementById('bars');
+function fillBars(){
+var f=bars.querySelectorAll('.fill');
+for(var i=0;i<f.length;i++){f[i].style.width=f[i].getAttribute('data-w')+'%';}
+}
+var items=document.querySelectorAll('.reveal');
+if(!('IntersectionObserver' in window)||reduce){
+for(var i=0;i<items.length;i++){items[i].classList.add('in');}
+fillBars();
+}else{
+var io=new IntersectionObserver(function(entries){
+entries.forEach(function(e){
+if(e.isIntersecting){
+e.target.classList.add('in');
+if(e.target.contains(bars)){setTimeout(fillBars,200);}
+io.unobserve(e.target);
+}
+});
+},{threshold:0.15});
+for(var j=0;j<items.length;j++){io.observe(items[j]);}
+}
+var bar=document.getElementById('progress');
+function onScroll(){
+var h=document.documentElement;
+var max=h.scrollHeight-h.clientHeight;
+bar.style.transform='scaleX('+(max>0?h.scrollTop/max:0)+')';
+}
+window.addEventListener('scroll',onScroll,{passive:true});
+onScroll();
+})();
+</script>
+</body>
+</html>
