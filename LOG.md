@@ -256,3 +256,15 @@ Failed approach: none
 Verified: make test (668 passed), make lint clean, make readme twice gave the same SHA-256, generated README block unchanged
 Risk: design.html Related work section not opened in a browser
 Handoff: human reviews the diff
+
+---
+
+## C2-6 Prep | 2026-10-12 | agent: antigravity | status: done
+Changed: docs/DECISIONS.md, tests/test_readme.py, STATE.md, LOG.md
+Decision: C2-6 LLMAgent decisions and guards recorded per human instruction; LLM_MODEL_ID chosen as gemini-2.0-flash; test_readme updated after README AI section removal
+Surprise: test_readme failed because README AI section was removed in previous commit without updating test heading list; fixed
+Failed approach: none
+Verified: make test (668 passed), make lint clean
+Risk: live recording needs GCP credentials and budget alert
+Handoff: implement C2-6 (agent/llm.py, cassette replay, tests, make record)
+

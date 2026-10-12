@@ -13,7 +13,6 @@ _HEADINGS = (
     "## What this shows",
     "## Quick start",
     "## How it works",
-    "## How this was built",
     "## Limitations",
 )
 

@@ -37,6 +37,10 @@
 - README claims are limited to: what make eval measured (1,000 seeds, simulated providers), and the stated caveats. It must disclose: naive and keyed have no policy engine or scan timeout by design; keyed’s only differences from hardened on the carrier A and C refund path are policy and liveness; keyed fails I5 only on carrier B; I7 for naive and keyed is a self-report; hardened’s I7 and the end-of-run reconcile are never exercised by the eval; rules P1, P3 and P5 produce no hardened denial in the eval; C2-2 faults (F4, F6, F7, F8) and the LLM agent were not built.
 - docs/DESIGN.md is drafted by Opus from the code and docs, then rewritten by the human. The agent’s draft is a starting point and is never committed as the final text.
 - docs/design.html and docs/DESIGN.md were drafted by a Claude agent from the repository and reviewed by the human. They are static documents. Figures in design.html are typed from results/summary.md and must be re-checked after any re-run of make eval. design.html is outside the original layout and is approved by the human.
+- C2-6 (LLM agent) is built after all. Cassettes live in tests/cassettes/, shared across runtimes, keyed by (seed, step, prompt_hash). google-genai is an optional pinned extra named llm. Malformed model output counts as a failed step and ends the run. No re-asks.
+- The LLM prompt is identical across runtimes and never shows keys, ledger state or the runtime name. The prompt is frozen after a 3-seed format dry run; changing it afterwards needs a new entry and a full re-record.
+- make record is run by the human only, on at most 50 seeds, with a hard call cap. LLM results are reported in a separate table and are never mixed into the ScriptedAgent figures. They come from a single recorded run of one model and are not a statistical estimate. summary.json and the ScriptedAgent part of summary.md must stay byte-identical to the current ones.
+- LLM_MODEL_ID: gemini-2.0-flash.
 
 ## Scope change requests
 (none)
