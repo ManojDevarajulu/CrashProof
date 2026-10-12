@@ -67,9 +67,7 @@ To inspect a replay, open viewer/index.html in a browser and choose the file res
 - The invariants read world records, the trace order, the approvals log and the ledger; I7 for naive and keyed reads the runtime's own terminal flag.
 - Details: docs/ARCHITECTURE.md and docs/INVARIANTS.md.
 
-## How this was built
 
-I built this with AI coding agents (Claude Code and Gemini) working under written rules: AGENTS.md (CLAUDE.md and GEMINI.md point to it), docs/RUNBOOK.md (task prompts), docs/REVIEW.md (review checklist), STATE.md and LOG.md (the agents' task log) and docs/DECISIONS.md (every decision). I chose the design, reviewed each task and read every result.
 
 ## Limitations
 
