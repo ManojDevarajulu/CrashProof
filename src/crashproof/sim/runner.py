@@ -1,4 +1,5 @@
 import sqlite3
+from collections.abc import Callable
 from contextlib import ExitStack, closing
 from dataclasses import dataclass, field
 from functools import partial
@@ -6,6 +7,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
+from crashproof.agent.base import Agent
 from crashproof.agent.scripted import ScriptedAgent
 from crashproof.clock import Clock, Scheduler
 from crashproof.config import PolicyConfig, ScenarioConfig, load_policy_config
@@ -31,6 +33,7 @@ from crashproof.world.store import Store
 QUIESCENCE_SECONDS = 72 * 3600
 
 type RuntimeKind = Literal["naive", "keyed", "hardened"]
+type AgentFactory = Callable[[Scenario], Agent]
 
 
 class _Runtime(Protocol):
@@ -96,6 +99,10 @@ class _Customer:
         )
 
 
+def scripted_agent(scenario: Scenario) -> Agent:
+    return ScriptedAgent(scenario.request, early_refund=scenario.early_refund)
+
+
 @dataclass
 class _Harness:
     clock: Clock
@@ -114,6 +121,7 @@ class _Harness:
     policy_config: PolicyConfig | None = None
     approvals: ApprovalLog | None = None
     approver: SimulatedApprover | None = None
+    agent_factory: AgentFactory = scripted_agent
 
 
 def _make_carrier(
@@ -197,7 +205,7 @@ def _add_policy(h: _Harness, seed: int, policy_config: PolicyConfig) -> None:
 
 
 def _make_runtime(kind: RuntimeKind, h: _Harness, config: ScenarioConfig) -> _Runtime:
-    agent = ScriptedAgent(h.scenario.request, early_refund=h.scenario.early_refund)
+    agent = h.agent_factory(h.scenario)
     if kind in ("naive", "keyed"):
         runtime_class = NaiveRuntime if kind == "naive" else KeyedRuntime
         return runtime_class(
@@ -318,9 +326,12 @@ def run_seed(
     kind: RuntimeKind,
     config: ScenarioConfig,
     policy_config: PolicyConfig | None = None,
+    *,
+    agent_factory: AgentFactory = scripted_agent,
 ) -> RunResult:
     with ExitStack() as stack:
         h = _build_harness(seed, config)
+        h.agent_factory = agent_factory
         _add_policy(
             h, seed, load_policy_config() if policy_config is None else policy_config
         )
@@ -413,7 +424,10 @@ def _run_once(
     kind: RuntimeKind,
     config: ScenarioConfig,
     policy_config: PolicyConfig | None,
+    agent_factory: AgentFactory,
 ) -> RunResult:
+    if agent_factory is not scripted_agent:
+        return run_seed(seed, kind, config, policy_config, agent_factory=agent_factory)
     if policy_config is None:
         return run_seed(seed, kind, config)
     return run_seed(seed, kind, config, policy_config)
@@ -424,10 +438,12 @@ def evaluate_seed(
     kind: RuntimeKind,
     config: ScenarioConfig,
     policy_config: PolicyConfig | None = None,
+    *,
+    agent_factory: AgentFactory = scripted_agent,
 ) -> RunResult:
     """Run a seed twice on fresh harnesses and add an I9 violation if they differ."""
-    first = _run_once(seed, kind, config, policy_config)
-    second = _run_once(seed, kind, config, policy_config)
+    first = _run_once(seed, kind, config, policy_config, agent_factory)
+    second = _run_once(seed, kind, config, policy_config, agent_factory)
     extra = check_i9(first.trace_hash, second.trace_hash)
     if not extra:
         return first

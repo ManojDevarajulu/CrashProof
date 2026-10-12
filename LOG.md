@@ -268,3 +268,14 @@ Verified: make test (668 passed), make lint clean
 Risk: live recording needs GCP credentials and budget alert
 Handoff: implement C2-6 (agent/llm.py, cassette replay, tests, make record)
 
+
+---
+
+## C2-6 | 2026-10-12 | agent: claude | status: done
+Changed: src/crashproof/agent/llm.py (new), cli.py (record, llm eval), sim/runner.py (agent_factory), sim/report.py (LLM section), pyproject.toml (llm extra, mypy override), Makefile (record), .env.example, tests/test_llm_agent.py (new), STATE.md, LOG.md
+Decision: one cassette file per seed, saved only when all three runtimes finish; GeminiClient re-raises SDK errors without their message (could hold the project id); GEMINI_MODEL must equal gemini-2.0-flash; per-agent cap of 30 steps
+Surprise: test_runner monkeypatches run_seed with 3 args, so _run_once passes agent_factory only when it is not the default
+Failed approach: first run_seed kwarg change broke that test; fixed. Baseline 200-seed eval overwrote results/, so I re-ran 1000 seeds to restore it
+Verified: make test (684 passed), make lint clean, 200-seed summary.json and summary.md cmp-identical before and after
+Risk: google-genai pin 1.20.0 and SDK calls untested (no network, not installed); broad except Exception in GeminiClient.generate
+Handoff: human reviews, dry-runs `make record RECORD_SEEDS=3`

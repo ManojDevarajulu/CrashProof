@@ -19,6 +19,10 @@ dev = [
     "types-PyYAML==6.0.12.20260906",
 ]
 
+llm = [
+    "google-genai==1.20.0",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -33,6 +37,10 @@ select = ["E", "F", "I", "UP", "B"]
 strict = true
 python_version = "3.12"
 files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["google.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

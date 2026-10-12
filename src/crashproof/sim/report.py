@@ -94,6 +94,23 @@ def _examples(summary: Mapping[str, object]) -> list[str]:
     return lines
 
 
+def _llm_section(llm: Mapping[str, object]) -> list[str]:
+    seeds = llm["seeds"]
+    assert isinstance(seeds, list)
+    view = {"seeds": len(seeds), "runtimes": llm["runtimes"]}
+    lines = ["", f"## LLM agent (recorded cassettes, {len(seeds)} seeds)", ""]
+    lines += _grouped_table(view)
+    lines += ["", "### Seeds with at least one violation, per invariant", ""]
+    lines += _invariant_table(view)
+    lines += [
+        "",
+        f"Model: {llm['model']}. One recorded run of one model, replayed from "
+        "cassettes. Not a statistical estimate, and separate from the "
+        "ScriptedAgent results above.",
+    ]
+    return lines
+
+
 def build_report(
     summary: Mapping[str, object], failures: Sequence[object] | None = None
 ) -> str:
@@ -106,6 +123,9 @@ def build_report(
     if failures is not None:
         lines += ["", "### Failing seed examples", ""]
         lines += _examples(summary)
+    llm = summary.get("llm")
+    if isinstance(llm, Mapping):
+        lines += _llm_section(llm)
     return "\n".join(lines) + "\n"
 
 

@@ -19,9 +19,10 @@ endif
 SEEDS ?= 200
 RUNTIMES ?= naive,keyed,hardened
 SEED ?= 1
+RECORD_SEEDS ?= 3
 RUNTIME ?= hardened
 
-.PHONY: setup test lint eval replay report readme
+.PHONY: setup test lint eval replay report readme record
 
 setup:
 	$(VENV)
@@ -46,3 +47,6 @@ report:
 
 readme: report
 	$(PYTHON_BIN) -m crashproof.cli readme
+
+record:
+	$(PYTHON_BIN) -m crashproof.cli record --seeds $(RECORD_SEEDS)

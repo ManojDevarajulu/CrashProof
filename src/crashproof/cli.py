@@ -4,13 +4,32 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import cast, get_args
 
+from crashproof.agent.llm import (
+    LLM_MODEL_ID,
+    MAX_RECORD_SEEDS,
+    CallBudget,
+    CallCapReached,
+    Cassette,
+    GeminiClient,
+    LLMAgent,
+    ModelCallError,
+    ModelClient,
+    cassette_paths,
+)
 from crashproof.config import ScenarioConfig, load_scenario_config
 from crashproof.models import Json
 from crashproof.sim.report import build_report, splice_results
-from crashproof.sim.runner import RunResult, RuntimeKind, evaluate_seed, run_seed
+from crashproof.sim.runner import (
+    AgentFactory,
+    RunResult,
+    RuntimeKind,
+    evaluate_seed,
+    run_seed,
+)
 
 _INVARIANTS = ("I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9")
 _RESULTS = Path("results")
+_CASSETTES = Path("tests/cassettes")
 
 
 def _runtime_list(text: str) -> list[RuntimeKind]:
@@ -34,6 +53,15 @@ def _positive(text: str) -> int:
     return value
 
 
+def _record_seeds(text: str) -> int:
+    value = _positive(text)
+    if value > MAX_RECORD_SEEDS:
+        raise argparse.ArgumentTypeError(
+            f"at most {MAX_RECORD_SEEDS} seeds may be recorded: {value}"
+        )
+    return value
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="crashproof")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -43,6 +71,8 @@ def _parser() -> argparse.ArgumentParser:
     rp = sub.add_parser("replay", help="run one seed twice and write its trace")
     rp.add_argument("--seed", type=_positive, required=True)
     rp.add_argument("--runtime", choices=get_args(RuntimeKind.__value__), required=True)
+    rec = sub.add_parser("record", help="record LLM cassettes (human only, live)")
+    rec.add_argument("--seeds", type=_record_seeds, required=True)
     sub.add_parser("report", help="write results/summary.md from results/summary.json")
     sub.add_parser("readme", help="splice results/summary.md into README.md")
     return parser
@@ -83,7 +113,41 @@ def _seeds(rows: Sequence[RunResult]) -> list[Json]:
     return [r.seed for r in sorted(rows, key=lambda r: r.seed)]
 
 
-def _eval(seeds: int, runtimes: list[RuntimeKind], config: ScenarioConfig) -> int:
+def _llm_factory(cassette: Cassette, client: ModelClient | None) -> AgentFactory:
+    return lambda scenario: LLMAgent(scenario.request, cassette, client)
+
+
+def _eval_llm(
+    runtimes: list[RuntimeKind], config: ScenarioConfig, directory: Path
+) -> Json:
+    """Replay recorded cassettes on every runtime; None when there are none."""
+    cassettes = [Cassette.load(path) for path in cassette_paths(directory)]
+    if not cassettes:
+        return None
+    by_kind: dict[RuntimeKind, list[RunResult]] = {
+        kind: [
+            evaluate_seed(c.seed, kind, config, agent_factory=_llm_factory(c, None))
+            for c in cassettes
+        ]
+        for kind in runtimes
+    }
+    return {
+        "model": ", ".join(sorted({c.model for c in cassettes})),
+        "seeds": [c.seed for c in sorted(cassettes, key=lambda c: c.seed)],
+        "runtimes": {kind: _counts(by_kind[kind], kind) for kind in runtimes},
+        "failing_seeds": {
+            kind: _seeds([r for r in rows if r.violations])
+            for kind, rows in by_kind.items()
+        },
+    }
+
+
+def _eval(
+    seeds: int,
+    runtimes: list[RuntimeKind],
+    config: ScenarioConfig,
+    cassettes: Path = _CASSETTES,
+) -> int:
     by_kind: dict[RuntimeKind, list[RunResult]] = {
         kind: [evaluate_seed(seed, kind, config) for seed in range(1, seeds + 1)]
         for kind in runtimes
@@ -97,6 +161,9 @@ def _eval(seeds: int, runtimes: list[RuntimeKind], config: ScenarioConfig) -> in
         "runtimes": {kind: _counts(by_kind[kind], kind) for kind in runtimes},
         "failing_seeds": {kind: _seeds(rows) for kind, rows in failing.items()},
     }
+    llm = _eval_llm(runtimes, config, cassettes)
+    if llm is not None and isinstance(summary, dict):
+        summary["llm"] = llm
     failures = sorted(
         (r for rows in failing.values() for r in rows),
         key=lambda r: (r.runtime, r.seed),
@@ -121,6 +188,40 @@ def _replay(seed: int, kind: RuntimeKind, config: ScenarioConfig) -> int:
     print(f"run2 {second.trace_hash}")
     print(path)
     return 0
+
+
+def _record(
+    seeds: int,
+    config: ScenarioConfig,
+    directory: Path,
+    client: ModelClient,
+    budget: CallBudget,
+) -> int:
+    """Record all three runtimes per seed; a seed is saved only when it completes."""
+    kinds: list[RuntimeKind] = ["naive", "keyed", "hardened"]
+    status = 0
+    for seed in range(1, seeds + 1):
+        path = directory / f"seed-{seed:04d}.json"
+        cassette = Cassette.load(path) if path.is_file() else Cassette(seed)
+        try:
+            for kind in kinds:
+                run_seed(
+                    seed, kind, config, agent_factory=_llm_factory(cassette, client)
+                )
+        except CallCapReached as error:
+            print(f"stopped at seed {seed}, not saved: {error}")
+            status = 1
+            break
+        except ModelCallError as error:
+            print(f"stopped at seed {seed}, not saved: {error}")
+            status = 1
+            break
+        print(cassette.save(directory))
+    print(
+        f"model {LLM_MODEL_ID}: calls {budget.calls}, "
+        f"prompt tokens {budget.prompt_tokens}, output tokens {budget.output_tokens}"
+    )
+    return status
 
 
 def _report() -> int:
@@ -168,6 +269,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "readme":
         return _readme()
     config = load_scenario_config()
+    if args.command == "record":
+        budget = CallBudget()
+        try:
+            client = GeminiClient(budget)
+        except ModelCallError as error:
+            print(f"error: {error}")
+            return 2
+        return _record(args.seeds, config, _CASSETTES, client, budget)
     if args.command == "eval":
         return _eval(args.seeds, args.runtimes, config)
     return _replay(args.seed, args.runtime, config)
