@@ -11,7 +11,7 @@ from crashproof.agent.base import Action, AgentError, Done, Observation, Wait
 from crashproof.models import Json, ReturnRequest
 from crashproof.runtime.tools import ToolCall, ToolModel, ToolName, ToolResult
 
-LLM_MODEL_ID = "gemini-2.0-flash"
+LLM_MODEL_ID = "gemini-2.5-flash-lite"
 MAX_RECORD_SEEDS = 50
 MAX_MODEL_CALLS = 600
 MAX_AGENT_STEPS = 30

@@ -31,7 +31,7 @@
       "step": 5
     }
   ],
-  "model": "gemini-2.0-flash",
+  "model": "gemini-2.5-flash-lite",
   "runs": {
     "hardened": {
       "ended": "finished",

@@ -73,12 +73,12 @@ Nine invariants are checked on every run (full definitions in docs/INVARIANTS.md
 | keyed | 3 | 0 | 0 | 0 | 0 | 7.33 |
 | naive | 3 | 0 | 0 | 0 | 0 | 7.33 |
 
-Model: gemini-2.0-flash. Separate from the ScriptedAgent results above.
+Model: gemini-2.5-flash-lite. Separate from the ScriptedAgent results above.
 
 One recorded run of one model on a small seed set; not a statistical estimate.
 <!-- RESULTS:END -->
 
-**LLM run, read this with the table above.** It is a 3-seed smoke test (23 model calls), not a result: two of three seeds is an anecdote. The model label in the generated block and in the cassettes is gemini-2.0-flash. The live run was served by gemini-3.8-flash, because the recording client maps the retired flash model names to it (src/crashproof/agent/llm.py), and the cassettes do not record that. The prompt is identical across runtimes and was frozen before recording.
+**LLM run, read this with the table above.** It is a 3-seed smoke test (23 model calls), not a result: two of three seeds is an anecdote. The model is gemini-2.5-flash-lite. The prompt is identical across runtimes and was frozen before recording.
 
 ## What this shows
 

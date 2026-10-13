@@ -313,3 +313,15 @@ Failed approach: first edit dropped the "What this shows" heading and test_readm
 Verified: make test (691 passed), make lint clean; seed-1 seq numbers and hardened hash checked against results/replay
 Risk: stale LLM wording may remain elsewhere (not grepped beyond DESIGN.md and design.html)
 Handoff: human reviews diff; not committed
+
+---
+
+## Model docs fix | 2026-10-13 | agent: antigravity | status: done
+Changed: src/crashproof/agent/llm.py, tests/cassettes/, README.md, docs/DECISIONS.md, STATE.md, LOG.md
+Decision: aligned model identifier to gemini-2.5-flash-lite across LLM_MODEL_ID, cassettes, summary and README note
+Surprise: none
+Failed approach: none
+Verified: make test (691 passed), make lint clean, make eval (1000 seeds), make readme clean
+Risk: none
+Handoff: human review
+

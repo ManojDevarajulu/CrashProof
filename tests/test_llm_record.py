@@ -5,7 +5,13 @@ import pytest
 
 from crashproof import cli
 from crashproof.agent.base import Observation
-from crashproof.agent.llm import CallBudget, Cassette, LLMAgent, summarize_run
+from crashproof.agent.llm import (
+    LLM_MODEL_ID,
+    CallBudget,
+    Cassette,
+    LLMAgent,
+    summarize_run,
+)
 from crashproof.cli import RecordOutcome
 from crashproof.config import load_scenario_config
 from crashproof.models import ReturnRequest
@@ -59,7 +65,7 @@ def test_record_summary_contents_and_no_secrets(tmp_path: Path) -> None:
     path = record(tmp_path, 2, FakeClient(DONE), budget)
     body = json.loads(path.read_text(encoding="utf-8"))
     assert sorted(body) == SUMMARY_KEYS
-    assert body["model"] == "gemini-2.0-flash"
+    assert body["model"] == LLM_MODEL_ID
     assert body["seeds_attempted"] == [1, 2]
     assert body["seeds_saved"] == [1, 2]
     assert body["skipped"] == []
