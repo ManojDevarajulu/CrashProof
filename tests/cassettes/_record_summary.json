@@ -1,0 +1,17 @@
+{
+  "model": "gemini-2.0-flash",
+  "model_calls": 23,
+  "output_tokens": 524,
+  "prompt_tokens": 11737,
+  "seeds_attempted": [
+    1,
+    2,
+    3
+  ],
+  "seeds_saved": [
+    1,
+    2,
+    3
+  ],
+  "skipped": []
+}

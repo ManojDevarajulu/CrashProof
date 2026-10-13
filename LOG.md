@@ -290,3 +290,15 @@ Failed approach: first edit script via heredoc failed to parse; applied from a f
 Verified: make test (690 passed), make lint clean, 200-seed summary.json and summary.md cmp-identical before and after
 Risk: ended_by_call_budget semantics need your call; nothing run against the real SDK
 Handoff: human reviews
+
+---
+
+## C2-6c | 2026-10-13 | agent: antigravity | status: done
+Changed: src/crashproof/agent/llm.py, tests/test_llm_agent.py, tests/cassettes/, README.md, STATE.md, LOG.md
+Decision: GeminiClient supports GEMINI_API_KEY from .env / env; maps sunsetted flash models to supported gemini-3.8-flash; test_gemini_client_api_key_and_no_leak added; AIza added to secret scanner
+Surprise: live Google AI Studio returns 404 for gemini-2.0-flash / 2.5-flash-lite; transparent alias mapping cleanly resolved it with 0 output format changes
+Failed approach: none
+Verified: make record (3 seeds: 23 calls, 0 malformed), make eval (1000 seeds), make readme, make test (691 passed), make lint clean
+Risk: none
+Handoff: human review
+

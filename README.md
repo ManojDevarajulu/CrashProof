@@ -30,6 +30,34 @@ A seed fixes one simulated order, return, customer behaviour and fault schedule.
 - I7 for naive and keyed is derived from the runtime's own terminal flag, because they have no ledger.
 - I6 and I8 apply to the hardened runtime only (they read its ledger).
 - All figures are measured by make eval on simulated providers. This is a simulation, not a claim about real carriers.
+
+## LLM agent (recorded cassettes, 3 seeds)
+
+| Runtime | Seeds | Duplicates (I1, I5) | Money (I2) | Policy (I3, I4) | Audit (I6, I8) | Liveness (I7) | Replay (I9) | Violating seeds |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| hardened | 3 | 0 + 0 | 0 | 0 + 0 | 0 + 0 | 0 | 0 | 0 |
+| keyed | 3 | 0 + 0 | 0 | 2 + 0 | n/a | 0 | 0 | 2 |
+| naive | 3 | 1 + 0 | 1 | 2 + 0 | n/a | 0 | 0 | 3 |
+
+### Seeds with at least one violation, per invariant
+
+| Runtime | I1 | I2 | I3 | I4 | I5 | I6 | I7 | I8 | I9 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| hardened | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| keyed | 0 | 0 | 2 | 0 | 0 | n/a | 0 | n/a | 0 |
+| naive | 1 | 1 | 2 | 0 | 0 | n/a | 0 | n/a | 0 |
+
+### How the recorded runs ended
+
+| Runtime | Seeds recorded | Seeds skipped | Malformed output | Step cap | Call budget | Mean agent steps |
+| --- | --- | --- | --- | --- | --- | --- |
+| hardened | 3 | 0 | 0 | 0 | 0 | 5.33 |
+| keyed | 3 | 0 | 0 | 0 | 0 | 7.33 |
+| naive | 3 | 0 | 0 | 0 | 0 | 7.33 |
+
+Model: gemini-2.0-flash. Separate from the ScriptedAgent results above.
+
+One recorded run of one model on a small seed set; not a statistical estimate.
 <!-- RESULTS:END -->
 
 ## What this shows

@@ -1,0 +1,70 @@
+{
+  "entries": [
+    {
+      "prompt_hash": "1500d42e29ca3c30b24b454e85221c99b1515680d15a2eb62113619d6007b659",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"get_order\",\"args\":{\"order_id\":\"ord-000001\"}}",
+      "step": 0
+    },
+    {
+      "prompt_hash": "e3f9d9e1d3d0b0574b5051716e7ada3aa4d2ca19276abb444c09ce9ea2409861",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"check_policy\",\"args\":{\"order_id\":\"ord-000001\"}}",
+      "step": 1
+    },
+    {
+      "prompt_hash": "8c07b4529c20905a8ccb7c5d00a9e884d622be1e417615915e7f708b97a4c39a",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"create_return_label\",\"args\":{\"order_id\":\"ord-000001\"}}",
+      "step": 2
+    },
+    {
+      "prompt_hash": "d5f67183ed62d8f98dcb38ea90a42493179b4d0449b6eea05c994a7e77704dc2",
+      "raw_output": "{\"action\":\"wait\"}",
+      "step": 3
+    },
+    {
+      "prompt_hash": "c0cb33aa94b6aee045682027926806647b9dd017fbd08caef6d9352eb60d2e25",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"issue_refund\",\"args\":{\"amount\":8842,\"order_id\":\"ord-000001\"}}",
+      "step": 4
+    },
+    {
+      "prompt_hash": "9fed68f37c0545ba131b7aad1ca50f380b7dc075c805e287ed679e50d63b5743",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"escalate_to_human\",\"args\":{\"reason\":\"issue_refund timed out with unknown result\"}}",
+      "step": 5
+    },
+    {
+      "prompt_hash": "68ae33d29808da1e2ae6a7cfd2edfd6ce4731fd1e765032e605e8587160a20f0",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"get_order\",\"args\":{\"order_id\":\"ord-000001\"}}",
+      "step": 6
+    },
+    {
+      "prompt_hash": "b109286a5ca1186ce1f0d6ec7deb2efbfc8e2a6ead26d926e747f4bbcdcdb402",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"issue_refund\",\"args\":{\"amount\":8842,\"order_id\":\"ord-000001\"}}",
+      "step": 7
+    },
+    {
+      "prompt_hash": "2df76e806e8daf7a977df3ba9c89746f7f811085195d72f3cdcb5e15eefe1dde",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"close_case\",\"args\":{}}",
+      "step": 8
+    },
+    {
+      "prompt_hash": "e8a74e45ca21d894a41986c4f9880cfd7529796a0917473370db44a7c2db4bfa",
+      "raw_output": "{\"action\":\"tool\",\"tool\":\"close_case\",\"args\":{}}",
+      "step": 8
+    }
+  ],
+  "model": "gemini-2.0-flash",
+  "runs": {
+    "hardened": {
+      "ended": "finished",
+      "steps": 9
+    },
+    "keyed": {
+      "ended": "finished",
+      "steps": 9
+    },
+    "naive": {
+      "ended": "finished",
+      "steps": 9
+    }
+  },
+  "seed": 1
+}

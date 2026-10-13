@@ -182,6 +182,49 @@ def test_gemini_client_with_fake_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "secret-p" not in str(info.value)
 
 
+def test_gemini_client_api_key_and_no_leak(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeUsage:
+        prompt_token_count = 5
+        candidates_token_count = 2
+
+    class FakeResponse:
+        text = DONE
+        usage_metadata = FakeUsage()
+
+    class FakeModels:
+        def generate_content(self, **kwargs: object) -> FakeResponse:
+            if kwargs.get("contents") == "boom":
+                raise RuntimeError("failure in key AIzaSy-secret")
+            return FakeResponse()
+
+    class FakeClient:
+        def __init__(self, **kwargs: object) -> None:
+            assert kwargs == {"api_key": "AIzaSy-secret"}
+            self.models = FakeModels()
+
+    class Genai:
+        pass
+
+    Genai.Client = FakeClient  # type: ignore[attr-defined]
+
+    class Types:
+        @staticmethod
+        def GenerateContentConfig(**kwargs: object) -> object:
+            return kwargs
+
+    monkeypatch.setattr(llm, "_load_sdk", lambda: (Genai, Types))
+    env = {
+        "GEMINI_API_KEY": "AIzaSy-secret",
+    }
+    budget = CallBudget()
+    client = GeminiClient(budget, env)
+    assert client.generate("hi") == DONE
+    assert (budget.calls, budget.prompt_tokens, budget.output_tokens) == (1, 5, 2)
+    with pytest.raises(ModelCallError) as info:
+        client.generate("boom")
+    assert "AIzaSy-secret" not in str(info.value)
+
+
 def test_llm_module_has_no_top_level_sdk_import() -> None:
     tree = ast.parse((ROOT / "src/crashproof/agent/llm.py").read_text("utf-8"))
     for node in tree.body:
@@ -198,7 +241,9 @@ def find_secret_markers(directory: Path) -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         hits += [
-            f"{path.name}: {m}" for m in ("GCP_", "project", "Bearer") if m in text
+            f"{path.name}: {m}"
+            for m in ("GCP_", "project", "Bearer", "AIza")
+            if m in text
         ]
     return hits
 

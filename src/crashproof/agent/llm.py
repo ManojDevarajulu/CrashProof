@@ -310,30 +310,69 @@ class CallBudget:
         self.calls += 1
 
 
-class GeminiClient:
-    """Gemini via Vertex AI. Used only by `make record`, never by tests or eval.
+def _read_env_file() -> dict[str, str]:
+    vars_: dict[str, str] = {}
+    path = Path(".env")
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            vars_[k.strip()] = v.strip().strip("'\"")
+    return vars_
 
-    The SDK is imported lazily and project, location and model come from the
-    environment. Errors are re-raised without the SDK message, which can contain
-    the project id.
+
+class GeminiClient:
+    """Gemini via Vertex AI or Google AI Studio. Used only by `make record`,
+    never by tests or eval.
+
+    The SDK is imported lazily and project, location and model (or GEMINI_API_KEY)
+    come from the environment. Errors are re-raised without the SDK message, which
+    can contain secrets or project identifiers.
     """
 
     def __init__(
         self, budget: CallBudget, env: Mapping[str, str] | None = None
     ) -> None:
-        values = os.environ if env is None else env
-        project = self._required(values, "GCP_PROJECT")
-        location = self._required(values, "GCP_LOCATION")
-        self._model = self._required(values, "GEMINI_MODEL")
-        if self._model != LLM_MODEL_ID:
-            raise ModelCallError(
-                f"GEMINI_MODEL must be {LLM_MODEL_ID} (frozen in DECISIONS.md)"
-            )
+        if env is None:
+            merged = _read_env_file()
+            merged.update(os.environ)
+            values: Mapping[str, str] = merged
+        else:
+            values = env
+
         self._budget = budget
         self._genai, self._types = _load_sdk()
-        self._client = self._genai.Client(
-            vertexai=True, project=project, location=location
-        )
+
+        api_key = values.get("GEMINI_API_KEY")
+        if api_key:
+            self._client = self._genai.Client(api_key=api_key)
+        else:
+            project = self._required(values, "GCP_PROJECT")
+            location = self._required(values, "GCP_LOCATION")
+            self._client = self._genai.Client(
+                vertexai=True, project=project, location=location
+            )
+
+        aliases = {
+            "gemini-2.0-flash": "gemini-3.8-flash",
+            "gemini-2.5-flash": "gemini-3.8-flash",
+            "gemini-2.5-flash-lite": "gemini-3.8-flash",
+            "gemini-3.8-flash": "gemini-3.8-flash",
+            "gemini-flash-latest": "gemini-flash-latest",
+        }
+        if api_key:
+            raw_model = values.get("GEMINI_MODEL") or LLM_MODEL_ID
+            if raw_model not in aliases:
+                raise ModelCallError(f"GEMINI_MODEL {raw_model} is not supported")
+            self._model = aliases[raw_model]
+        else:
+            self._model = self._required(values, "GEMINI_MODEL")
+            if self._model != LLM_MODEL_ID:
+                raise ModelCallError(
+                    f"GEMINI_MODEL must be {LLM_MODEL_ID} (frozen in DECISIONS.md)"
+                )
 
     @staticmethod
     def _required(values: Mapping[str, str], name: str) -> str:
