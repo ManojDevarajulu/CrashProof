@@ -279,3 +279,14 @@ Failed approach: first run_seed kwarg change broke that test; fixed. Baseline 20
 Verified: make test (684 passed), make lint clean, 200-seed summary.json and summary.md cmp-identical before and after
 Risk: google-genai pin 1.20.0 and SDK calls untested (no network, not installed); broad except Exception in GeminiClient.generate
 Handoff: human reviews, dry-runs `make record RECORD_SEEDS=3`
+
+---
+
+## C2-6b | 2026-10-13 | agent: claude | status: done
+Changed: src/crashproof/agent/llm.py, cli.py, sim/report.py, tests/test_llm_record.py (new), STATE.md, LOG.md
+Decision: _record_summary.json is written by the record command after _record returns (not inside _record), so the earlier cap test, which asserts no json files, stays unedited; mean_agent_steps is a 2-decimal string because Json has no floats
+Surprise: a seed that hits the call cap is discarded, so ended_by_call_budget can never be stored in a saved cassette; it is a counted column that stays 0
+Failed approach: first edit script via heredoc failed to parse; applied from a file instead. 200-seed eval overwrote results/, so 1000 seeds re-run to restore
+Verified: make test (690 passed), make lint clean, 200-seed summary.json and summary.md cmp-identical before and after
+Risk: ended_by_call_budget semantics need your call; nothing run against the real SDK
+Handoff: human reviews

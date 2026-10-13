@@ -17,6 +17,9 @@ MAX_MODEL_CALLS = 600
 MAX_AGENT_STEPS = 30
 
 
+type EndReason = Literal["finished", "ended_by_malformed_output", "ended_by_step_cap"]
+
+
 class CassetteMiss(AgentError):
     pass
 
@@ -139,6 +142,7 @@ class Cassette:
         self.seed = seed
         self.model = model
         self._entries: dict[tuple[int, str], str] = {}
+        self.runs: dict[str, dict[str, str | int]] = {}
 
     def get(self, step: int, digest: str) -> str | None:
         return self._entries.get((step, digest))
@@ -154,7 +158,12 @@ class Cassette:
             {"step": step, "prompt_hash": digest, "raw_output": raw}
             for (step, digest), raw in sorted(self._entries.items())
         ]
-        body = {"model": self.model, "seed": self.seed, "entries": entries}
+        body = {
+            "model": self.model,
+            "seed": self.seed,
+            "entries": entries,
+            "runs": self.runs,
+        }
         return json.dumps(body, sort_keys=True, indent=2) + "\n"
 
     def save(self, directory: Path) -> Path:
@@ -171,6 +180,7 @@ class Cassette:
     def load_from_text(cls, text: str) -> "Cassette":
         body = json.loads(text)
         cassette = cls(int(body["seed"]), str(body["model"]))
+        cassette.runs = body.get("runs", {})
         for entry in body["entries"]:
             cassette.put(
                 int(entry["step"]), str(entry["prompt_hash"]), str(entry["raw_output"])
@@ -211,6 +221,7 @@ class LLMAgent:
         self._step = 0
         self._ended = False
         self.failed_steps: list[int] = []
+        self.end_reason: EndReason = "finished"
 
     def next_action(self, obs: Observation) -> Action:
         if self._ended:
@@ -226,6 +237,7 @@ class LLMAgent:
             action = parse_action(raw)
         except ValidationError:
             self.failed_steps.append(step)
+            self.end_reason = "ended_by_malformed_output"
             return self._end()
         if isinstance(action, ToolCall):
             self._pending = action
@@ -234,6 +246,10 @@ class LLMAgent:
         else:
             self._ended = True
         return action
+
+    @property
+    def steps(self) -> int:
+        return self._step
 
     def _note_previous(self, obs: Observation) -> None:
         if self._pending is not None:
@@ -260,11 +276,25 @@ class LLMAgent:
 
     def _fail(self) -> Done:
         self.failed_steps.append(self._step)
+        self.end_reason = "ended_by_step_cap"
         return self._end()
 
     def _end(self) -> Done:
         self._ended = True
         return Done()
+
+
+def summarize_run(agents: list["LLMAgent"]) -> dict[str, str | int]:
+    """How one runtime's run ended, over every agent it started. Malformed output
+    outranks the step cap, which outranks finished. ended_by_call_budget is never
+    stored: a seed that hits the call budget is discarded, not saved."""
+    reasons = {agent.end_reason for agent in agents}
+    ended: EndReason = "finished"
+    if "ended_by_step_cap" in reasons:
+        ended = "ended_by_step_cap"
+    if "ended_by_malformed_output" in reasons:
+        ended = "ended_by_malformed_output"
+    return {"ended": ended, "steps": sum(agent.steps for agent in agents)}
 
 
 class CallBudget:

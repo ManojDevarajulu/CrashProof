@@ -94,6 +94,33 @@ def _examples(summary: Mapping[str, object]) -> list[str]:
     return lines
 
 
+_ENDED_COLUMNS = (
+    "seeds_recorded",
+    "seeds_skipped",
+    "ended_by_malformed_output",
+    "ended_by_step_cap",
+    "ended_by_call_budget",
+    "mean_agent_steps",
+)
+
+
+def _ended_table(view: Mapping[str, object]) -> list[str]:
+    header = [
+        "Runtime",
+        "Seeds recorded",
+        "Seeds skipped",
+        "Malformed output",
+        "Step cap",
+        "Call budget",
+        "Mean agent steps",
+    ]
+    rows = [
+        [name, *(_cell(_counts_of(view, name)[col]) for col in _ENDED_COLUMNS)]
+        for name in _present(view)
+    ]
+    return _table(header, rows)
+
+
 def _llm_section(llm: Mapping[str, object]) -> list[str]:
     seeds = llm["seeds"]
     assert isinstance(seeds, list)
@@ -102,11 +129,14 @@ def _llm_section(llm: Mapping[str, object]) -> list[str]:
     lines += _grouped_table(view)
     lines += ["", "### Seeds with at least one violation, per invariant", ""]
     lines += _invariant_table(view)
+    lines += ["", "### How the recorded runs ended", ""]
+    lines += _ended_table(view)
     lines += [
         "",
-        f"Model: {llm['model']}. One recorded run of one model, replayed from "
-        "cassettes. Not a statistical estimate, and separate from the "
-        "ScriptedAgent results above.",
+        f"Model: {llm['model']}. Separate from the ScriptedAgent results above.",
+        "",
+        "One recorded run of one model on a small seed set; not a statistical "
+        "estimate.",
     ]
     return lines
 

@@ -1,6 +1,7 @@
 import argparse
 import json
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast, get_args
 
@@ -15,6 +16,7 @@ from crashproof.agent.llm import (
     ModelCallError,
     ModelClient,
     cassette_paths,
+    summarize_run,
 )
 from crashproof.config import ScenarioConfig, load_scenario_config
 from crashproof.models import Json
@@ -26,10 +28,17 @@ from crashproof.sim.runner import (
     evaluate_seed,
     run_seed,
 )
+from crashproof.sim.scenario import Scenario
 
 _INVARIANTS = ("I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9")
 _RESULTS = Path("results")
 _CASSETTES = Path("tests/cassettes")
+_RECORD_SUMMARY = "_record_summary.json"
+_ENDED = (
+    "ended_by_malformed_output",
+    "ended_by_step_cap",
+    "ended_by_call_budget",
+)
 
 
 def _runtime_list(text: str) -> list[RuntimeKind]:
@@ -117,6 +126,37 @@ def _llm_factory(cassette: Cassette, client: ModelClient | None) -> AgentFactory
     return lambda scenario: LLMAgent(scenario.request, cassette, client)
 
 
+def _skipped_seeds(directory: Path, recorded: set[int]) -> list[int]:
+    path = directory / _RECORD_SUMMARY
+    if not path.is_file():
+        return []
+    skipped = json.loads(path.read_text(encoding="utf-8"))["skipped"]
+    return sorted({int(row["seed"]) for row in skipped} - recorded)
+
+
+def _llm_stats(
+    cassettes: list[Cassette], kind: RuntimeKind, skipped: int
+) -> dict[str, Json]:
+    runs = [c.runs[kind] for c in cassettes if kind in c.runs]
+    steps = [int(run["steps"]) for run in runs]
+    stats: dict[str, Json] = {"seeds_recorded": len(runs), "seeds_skipped": skipped}
+    for name in _ENDED:
+        stats[name] = sum(1 for run in runs if run["ended"] == name)
+    stats["mean_agent_steps"] = f"{sum(steps) / max(len(steps), 1):.2f}"
+    return stats
+
+
+def _collecting_factory(
+    cassette: Cassette, client: ModelClient, agents: list[LLMAgent]
+) -> AgentFactory:
+    def make(scenario: Scenario) -> LLMAgent:
+        agent = LLMAgent(scenario.request, cassette, client)
+        agents.append(agent)
+        return agent
+
+    return make
+
+
 def _eval_llm(
     runtimes: list[RuntimeKind], config: ScenarioConfig, directory: Path
 ) -> Json:
@@ -131,10 +171,18 @@ def _eval_llm(
         ]
         for kind in runtimes
     }
+    skipped = _skipped_seeds(directory, {c.seed for c in cassettes})
     return {
         "model": ", ".join(sorted({c.model for c in cassettes})),
         "seeds": [c.seed for c in sorted(cassettes, key=lambda c: c.seed)],
-        "runtimes": {kind: _counts(by_kind[kind], kind) for kind in runtimes},
+        "skipped_seeds": cast(list[Json], skipped),
+        "runtimes": {
+            kind: {
+                **_counts(by_kind[kind], kind),
+                **_llm_stats(cassettes, kind, len(skipped)),
+            }
+            for kind in runtimes
+        },
         "failing_seeds": {
             kind: _seeds([r for r in rows if r.violations])
             for kind, rows in by_kind.items()
@@ -190,32 +238,69 @@ def _replay(seed: int, kind: RuntimeKind, config: ScenarioConfig) -> int:
     return 0
 
 
+@dataclass
+class RecordOutcome:
+    attempted: list[int] = field(default_factory=list)
+    saved: list[int] = field(default_factory=list)
+    skipped: list[tuple[int, str]] = field(default_factory=list)
+
+
+def _write_record_summary(
+    directory: Path, outcome: RecordOutcome, budget: CallBudget
+) -> Path:
+    """Only the model id, seed lists, fixed reason codes and counts. Nothing from
+    the environment, the SDK or the network goes into this file."""
+    body: Json = {
+        "model": LLM_MODEL_ID,
+        "seeds_attempted": cast(list[Json], outcome.attempted),
+        "seeds_saved": cast(list[Json], outcome.saved),
+        "skipped": [{"seed": s, "reason": r} for s, r in outcome.skipped],
+        "model_calls": budget.calls,
+        "prompt_tokens": budget.prompt_tokens,
+        "output_tokens": budget.output_tokens,
+    }
+    path = directory / _RECORD_SUMMARY
+    _write_json(path, body)
+    return path
+
+
 def _record(
     seeds: int,
     config: ScenarioConfig,
     directory: Path,
     client: ModelClient,
     budget: CallBudget,
+    outcome: RecordOutcome | None = None,
 ) -> int:
     """Record all three runtimes per seed; a seed is saved only when it completes."""
     kinds: list[RuntimeKind] = ["naive", "keyed", "hardened"]
     status = 0
+    outcome = RecordOutcome() if outcome is None else outcome
     for seed in range(1, seeds + 1):
         path = directory / f"seed-{seed:04d}.json"
         cassette = Cassette.load(path) if path.is_file() else Cassette(seed)
+        outcome.attempted.append(seed)
         try:
             for kind in kinds:
+                agents: list[LLMAgent] = []
                 run_seed(
-                    seed, kind, config, agent_factory=_llm_factory(cassette, client)
+                    seed,
+                    kind,
+                    config,
+                    agent_factory=_collecting_factory(cassette, client, agents),
                 )
+                cassette.runs[kind] = summarize_run(agents)
         except CallCapReached as error:
             print(f"stopped at seed {seed}, not saved: {error}")
+            outcome.skipped.append((seed, "call_cap_reached"))
             status = 1
             break
         except ModelCallError as error:
             print(f"stopped at seed {seed}, not saved: {error}")
+            outcome.skipped.append((seed, "model_call_failed"))
             status = 1
             break
+        outcome.saved.append(seed)
         print(cassette.save(directory))
     print(
         f"model {LLM_MODEL_ID}: calls {budget.calls}, "
@@ -276,7 +361,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         except ModelCallError as error:
             print(f"error: {error}")
             return 2
-        return _record(args.seeds, config, _CASSETTES, client, budget)
+        outcome = RecordOutcome()
+        status = _record(args.seeds, config, _CASSETTES, client, budget, outcome)
+        _write_record_summary(_CASSETTES, outcome, budget)
+        return status
     if args.command == "eval":
         return _eval(args.seeds, args.runtimes, config)
     return _replay(args.seed, args.runtime, config)
