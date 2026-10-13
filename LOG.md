@@ -302,3 +302,14 @@ Verified: make record (3 seeds: 23 calls, 0 malformed), make eval (1000 seeds), 
 Risk: none
 Handoff: human review
 
+
+---
+
+## README polish | 2026-10-13 | agent: claude | status: done
+Changed: README.md, docs/DESIGN.md, docs/design.html, docs/DECISIONS.md (pending approval entry), STATE.md, LOG.md
+Decision: new sections sit under the test-required "What this shows" heading; generated block and cassettes untouched
+Surprise: cassettes label gemini-2.0-flash but GeminiClient aliases it to gemini-3.8-flash for live calls; disclosed, not fixed
+Failed approach: first edit dropped the "What this shows" heading and test_readme failed; restored as parent heading
+Verified: make test (691 passed), make lint clean; seed-1 seq numbers and hardened hash checked against results/replay
+Risk: stale LLM wording may remain elsewhere (not grepped beyond DESIGN.md and design.html)
+Handoff: human reviews diff; not committed

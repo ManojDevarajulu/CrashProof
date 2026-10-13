@@ -53,17 +53,19 @@ A sixth change, skipping the final reconcile at the end of a run, changed nothin
 ## What this does not show
 
 - It is a simulation. The carriers are fictional and their failures are my assumptions.
-- The agent is a deterministic script, not a language model. Nothing here measures any model.
+- The 1,000-seed results use a deterministic script, not a language model. A separate 3-seed recorded run of one model is a smoke test, not a measurement of any model.
 - The fault rates and the scenario mix are arbitrary. Change them and the counts change.
 - Hardened never left a workflow unfinished in these runs, but the scan timeout is what ensures that in these runs: removing it, 34 seeds left a workflow open. The end-of-run reconcile never changed an outcome in any measured seed.
 - Policy rule P3 denied a step in 86 of the 1,000 hardened seeds, but those denials are not terminal: the workflow waits for the scan. P1 and P5 never denied in the measured seeds.
 - For naive and keyed, the "never finished" check reads the runtime's own flag, because they have no ledger.
 - The simulated refund service always supports idempotency keys and lookup by key; a refund provider without keys was not modelled.
+- The 1,000 seeds are one sample of the scenario mix and the counts have no confidence interval.
+- After a simulated crash, a rebuilt naive or keyed runtime has no memory of earlier effects or of webhooks it already received; this follows from their having no ledger.
 - Crashes are injected only after an effect is applied, and execution is single-threaded; a crash between recording intent and calling the provider, and truly concurrent workers, are not modelled.
 
 ## Possible next steps
 
-- Put a real language model behind the same agent interface, with its responses recorded so runs stay replayable.
+- Record more LLM seeds (up to the 50-seed cap). The LLMAgent and cassettes exist; only 3 seeds are recorded.
 - Build the four skipped faults. Out-of-order delivery is the one I would expect to matter most.
 - Run the same invariants against a provider sandbox, to see how wrong my assumptions are.
 
