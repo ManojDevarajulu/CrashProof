@@ -1,6 +1,6 @@
 import re
 
-from crashproof.sim.report import build_report, splice_results
+from crashproof.sim.report import build_readme_report, build_report, splice_results
 
 _NULLS = {"I6": None, "I8": None}
 
@@ -128,3 +128,13 @@ def test_splice_results_replaces_between_markers_only() -> None:
     assert spliced.startswith(f"head\n{start}\n## Results")
     assert spliced.endswith(f"\n{end}\ntail\n")
     assert splice_results(spliced, build_report(full_summary())) == spliced
+
+
+def test_build_readme_report_excludes_detail_tables() -> None:
+    summary = full_summary()
+    report = build_readme_report(summary)
+    assert "## Results" in report
+    assert "| hardened | 10 | 0 + 0 |" in report
+    assert "### Seeds with at least one violation" not in report
+    assert "### Failing seed examples" not in report
+
