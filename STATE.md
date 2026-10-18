@@ -2,10 +2,10 @@
 <!-- Overwrite this whole file at the end of every task. Max 25 lines. -->
 
 Cut: 2 / 3
-Last completed: PR 2: Make README first screen readable & compact results block
-Next task: awaiting human review / merge of PR 2
-Branch: fix/readable-first-screen
-Last verified: pytest (692 passed), ruff clean, mypy --strict clean
+Last completed: PR 3: Add "How it was built" section to README.md
+Next task: awaiting human review / merge of PR 3
+Branch: fix/how-it-was-built
+Last verified: pytest (692 passed), ruff clean, make readme clean
 Last make eval (1000 seeds), violating seeds: hardened 0, keyed 631, naive 747
 LLM eval (3 seeds), violating seeds: hardened 0, keyed 2, naive 3 (0 malformed outputs)
 Gate 3: passed in clean WSL clone; repo pushed to https://github.com/ManojDevarajulu/CrashProof

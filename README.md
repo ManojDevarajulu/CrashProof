@@ -132,7 +132,13 @@ To inspect a replay, open viewer/index.html in a browser and choose the file res
 - Quality and invariants: pytest, ruff, mypy.
 - LLM evaluation: google-genai (used only for offline cassette recording; evals and tests are 100% offline).
 
+## How it was built
 
+- The spec, invariants, and scope were defined before any implementation code (task T0 in `LOG.md`).
+- Coding agents built one task at a time under the protocol in `AGENTS.md`, and the author reviewed every diff.
+- `tests/test_no_nondeterminism.py` scans the AST to ban system clocks, unseeded randomness, threads, and network calls in `src/`.
+- All numbers come directly from `make eval`, and a regression test fails if the README becomes stale.
+- The broken-version sabotage table demonstrates that the invariant checks catch bugs when they should.
 
 ## Limitations
 
