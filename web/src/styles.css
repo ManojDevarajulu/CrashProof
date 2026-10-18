@@ -1,0 +1,155 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b6b6b;
+  --rule: #e2e2e2;
+  --accent: #c62828;
+  --accent-bg: #fdecea;
+  --ok: #2e7d32;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111111;
+    --fg: #e6e6e6;
+    --muted: #8f8f8f;
+    --rule: #2c2c2c;
+    --accent: #ff6b6b;
+    --accent-bg: #3a1717;
+    --ok: #81c784;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 72rem;
+  padding: 1.5rem 1rem 3rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+h1 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 2rem 0 0.5rem;
+}
+
+a {
+  color: inherit;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.lede {
+  font-size: 1.05rem;
+  margin: 1.5rem 0 0;
+}
+
+table {
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.3rem 0.6rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+th[scope="row"],
+thead th:first-child {
+  text-align: left;
+}
+
+.zero {
+  color: var(--muted);
+}
+
+.na {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.bad {
+  color: var(--accent);
+}
+
+.total {
+  font-weight: bold;
+}
+
+td button {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline dotted;
+}
+
+td button[aria-pressed="true"] {
+  background: var(--accent-bg);
+  outline: 1px solid var(--accent);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panel {
+  border-left: 2px solid var(--accent);
+  margin-top: 1rem;
+  padding: 0 0 0 1rem;
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+.seeds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.seeds a {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.error {
+  color: var(--accent);
+}
+
+footer {
+  border-top: 1px solid var(--rule);
+  margin-top: 3rem;
+  padding-top: 1rem;
+}

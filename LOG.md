@@ -419,3 +419,14 @@ Failed approach: none
 Verified: make test (703 passed), make lint clean, make site; per-invariant seed counts equal summary.json; 1000-seed eval reran in 19s with byte-identical summary.json and failures.json
 Risk: none
 Handoff: human reviews F1
+
+---
+
+## F2 | 2026-10-18 | agent: claude | status: done
+Changed: web/ (new: package.json, lockfile, tsconfig, vite.config.ts, index.html, src/), .github/workflows/ci.yml, STATE.md, LOG.md
+Decision: merges ARCHITECTURE F2 (scaffold) and F3 (Results screen); deps limited to the AGENTS.md allowlist plus @types/react(-dom), exact-pinned; no plugin-react or testing-library: JSX via tsconfig, components tested with renderToStaticMarkup; hash routing, no router
+Surprise: tsc rejected node:fs in a test (no @types/node); used import.meta.glob to read the exported index instead
+Failed approach: none
+Verified: make test (703 passed), make lint clean, npm test (11 passed incl. real index.json), npm run build ok; page checked in a browser (table, seed list, LLM table)
+Risk: CI exports site data from the 200-seed eval; the deploy (F4) must use 1000 seeds
+Handoff: human reviews F2

@@ -2,10 +2,10 @@
 <!-- Overwrite this whole file at the end of every task. Max 25 lines. -->
 
 Cut: Frontend F1-F6 / Real adapter R1-R5
-Last completed: F1 make site (web/public/data/index.json + 20 seeds x 3 replays)
-Next task: F2 web/ scaffold and Results screen
-Branch: feat/f1-site-exporter
-Last verified: make test (703 passed), make lint clean, make site
+Last completed: F2 web/ scaffold (Vite 8, React 18, TS 7 strict, Vitest) and Results screen; CI builds and tests web/
+Next task: F3 Seed screen
+Branch: feat/f2-web-results
+Last verified: make test (703 passed), make lint clean, web: vitest 11 passed, vite build ok
 Last make eval (1000 seeds), violating seeds: hardened 0, keyed 631, naive 747
 LLM eval (3 seeds), violating seeds: hardened 0, keyed 2, naive 3 (0 malformed outputs)
 Gate 3: passed; repo pushed to https://github.com/ManojDevarajulu/CrashProof
