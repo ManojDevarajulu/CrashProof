@@ -360,3 +360,15 @@ Verified: pytest (692 passed), ruff clean, mypy --strict clean, make readme test
 Risk: none
 Handoff: ready for human review of PR 2, then PR 3 (How it was built)
 
+---
+
+## PR 3 | 2026-10-18 | agent: antigravity | status: done
+Changed: README.md, STATE.md, LOG.md
+Decision: added 5 factual bullets under ## How it was built before Limitations; 0 URLs
+Surprise: none
+Failed approach: none
+Verified: pytest (692 passed incl. tests/test_readme.py 21 passed), make lint clean
+Risk: none
+Handoff: ready for human review of PR 3, then PR 4 (GitHub Actions CI)
+
+
