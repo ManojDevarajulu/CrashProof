@@ -1,4 +1,3 @@
-
 # AGENTS.md: Crashproof
 
 Read this file fully, then do the session start in Section 8, before writing any
@@ -45,7 +44,7 @@ hardened) over S seeds, from measured runs only.
 13. **Human review gate.** After each task, stop. The human reviews the diff
     before the next task.
 14. **Single active agent.** Only one coding agent works on the repo at a time.
-    No parallel agents. Commit directly to main, one commit per task, before handing off. The human tags each reviewed task.
+    No parallel agents. Work on feature branches; merge each task through a pull request with a structured description (Intent, Trade-offs, Verification). The human tags each reviewed task.
 15. **Protected files.** Only the human edits `AGENTS.md`, `CLAUDE.md`,
     `GEMINI.md`, `docs/SPEC.md`, `docs/INVARIANTS.md`, `docs/ARCHITECTURE.md`,
     `docs/REVIEW.md`, `docs/RUNBOOK.md`. Propose changes in `docs/DECISIONS.md` instead.
@@ -72,13 +71,13 @@ bus; ScriptedAgent and LLMAgent (cassette record/replay); three runtimes:
 naive, keyed (Cut 2) and hardened (state machine, effects ledger, idempotency,
 reconciliation, policy engine, audit log); seeded scenario generator and fault injector;
 invariant checker; CLI `eval`, `replay`, `report`, `record`; one static HTML trace
-viewer (Cut 3); docs.
+viewer (Cut 3); docs,viewer (Cut 3); CI workflow (.github/workflows/ci.yml) running lint, test, 200-seed eval, and hardened replay hash check; docs.;
 
 OUT OF SCOPE (do not build, scaffold or "prepare for"): real integrations;
 HTTP servers or FastAPI; auth, users, multi-tenancy; any frontend framework or
 chart library; other workflows (tracking, transport, tickets, exchanges);
 Postgres, Redis, Kafka, Celery, Temporal or any external service; Docker, K8s,
-cloud deploy, CI/CD; fine-tuning, RAG, embeddings, agent frameworks (LangChain
+cloud deploy; fine-tuning, RAG, embeddings, agent frameworks (LangChain
 etc.); OpenTelemetry; premature optimization; currency, tax, shipping-cost,
 inventory logic; plugin systems, config frameworks, speculative abstractions;
 rewrites in other languages.

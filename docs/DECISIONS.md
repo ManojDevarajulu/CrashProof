@@ -1,6 +1,7 @@
 # DECISIONS.md
 
 ## Decisions
+
 - LLM: Gemini via Vertex AI (google-genai SDK); model name via GEMINI_MODEL, chosen before C2-6.
 - LLM determinism comes from cassettes, not temperature. Gate 2 uses ScriptedAgent.
 - Concurrency: single-threaded discrete-event scheduler, no asyncio.
@@ -40,12 +41,16 @@
 - C2-6 (LLM agent) is built after all. Cassettes live in tests/cassettes/, shared across runtimes, keyed by (seed, step, prompt_hash). google-genai is an optional pinned extra named llm. Malformed model output counts as a failed step and ends the run. No re-asks.
 - The LLM prompt is identical across runtimes and never shows keys, ledger state or the runtime name. The prompt is frozen after a 3-seed format dry run; changing it afterwards needs a new entry and a full re-record.
 - make record is run by the human only, on at most 50 seeds, with a hard call cap. LLM results are reported in a separate table and are never mixed into the ScriptedAgent figures. They come from a single recorded run of one model and are not a statistical estimate. summary.json and the ScriptedAgent part of summary.md must stay byte-identical to the current ones.
-- LLM_MODEL_ID: gemini-2.0-flash.
-
-## Scope change requests
-(none)
-
-## Pending approval
+- LLM_MODEL_ID: gemini-2.5-flash-lite (updated per human instruction).
 - Correction (C3-3 step 0, hardened, seeds 1..1000): P3 denies in 86 seeds (of which 68 end closed, 13 scan_timeout, 5 denied_P2), so P3 denials are not terminal; P1 and P5 deny in 0 seeds. The README Limitations bullet saying P1, P3 and P5 produce no hardened denial is corrected accordingly; the earlier 200-seed note in the Decisions section is not edited.
 - Correction: docs/DESIGN.md and docs/design.html as committed were drafted by a Claude agent and edited by the human; the earlier entry saying an agent draft is never committed as the final text is superseded. The README-claims entry's clause that P1, P3 and P5 produce no hardened denial is superseded by the P3 correction: P3 denies in 86 seeds; P1 and P5 never deny. Pre-send audit fixes were applied in one commit.
-- Model: gemini-2.5-flash-lite (updated per human instruction). LLM_MODEL_ID, cassettes, summary and README now consistently specify gemini-2.5-flash-lite.
+- Workflow: development moves to feature branches with one pull request per task containing Intent, Trade-offs, and Verification.
+
+## Scope change requests
+
+- CI workflow (.github/workflows/ci.yml) and test_readme_has_no_urls exception for GitHub Actions workflow badge and run URL approved by human.
+
+
+## Pending approval
+
+(none)
