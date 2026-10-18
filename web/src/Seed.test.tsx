@@ -1,41 +1,57 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import type { RuntimeName } from "./data";
 import { fixtureIndex } from "./fixture";
-import { SeedView } from "./Seed";
+import { SeedView, type LoadedTrace } from "./Seed";
 import type { TraceEvent } from "./trace";
 
-const events: TraceEvent[] = [
+const naiveEvents: TraceEvent[] = [
   { seq: 0, vt: 0, workflow_id: "wf-000001", actor: "world", event: "refund.issued", data: { refund_id: "rfd-000001" } },
   { seq: 1, vt: 0, workflow_id: "wf-000001", actor: "fault", event: "fault.F2", data: { attempt: 1 } },
   { seq: 2, vt: 60, workflow_id: "wf-000001", actor: "world", event: "refund.issued", data: { refund_id: "rfd-000002" } },
 ];
+const hardenedEvents: TraceEvent[] = [
+  { seq: 0, vt: 0, workflow_id: "wf-000001", actor: "world", event: "refund.issued", data: { refund_id: "rfd-000001" } },
+  { seq: 1, vt: 0, workflow_id: "wf-000001", actor: "runtime", event: "executor.unknown", data: { effect_type: "issue_refund" } },
+  { seq: 2, vt: 0, workflow_id: "wf-000001", actor: "runtime", event: "reconcile.applied", data: { effect_type: "issue_refund" } },
+];
 
-function render(runtime: "naive" | "hardened", hash: "verified" | "mismatch") {
-  const index = fixtureIndex();
-  const entry = index.seeds[0]!;
-  return renderToStaticMarkup(
-    <SeedView index={index} entry={entry} runtime={runtime} events={events} hash={hash} />,
-  );
+function render(runtime: RuntimeName, hash: LoadedTrace["hash"] = "verified") {
+  const entry = fixtureIndex().seeds[0]!;
+  const traces = {
+    naive: { events: naiveEvents, hash },
+    keyed: { events: hardenedEvents, hash },
+    hardened: { events: hardenedEvents, hash },
+  };
+  return renderToStaticMarkup(<SeedView entry={entry} runtime={runtime} traces={traces} />);
 }
 
 describe("SeedView", () => {
   it("lists the violation and highlights the refunds behind it", () => {
-    const html = render("naive", "verified");
-    expect(html).toContain("I1 At most one refund per return: 2 refunds");
-    expect(html.match(/class="hit"/g)).toHaveLength(2);
-    expect(html).toContain('class="fault"');
-    expect(html).toContain("World recorded 2 refunds and 0 labels.");
-    expect(html).toContain("No ledger: naive");
+    const html = render("naive");
+    expect(html).toContain("At most one refund per return");
+    expect(html).toContain("2 refunds");
+    expect(html.match(/class="is-hit"/g)).toHaveLength(2);
+    expect(html).toContain('class="is-fault"');
+    expect(html).toContain("naive has no ledger");
   });
 
-  it("marks the current runtime tab and the other tabs' verdicts", () => {
-    const html = render("naive", "verified");
-    expect(html).toContain('aria-current="page" class="bad">naive ✖ I1</a>');
-    expect(html).toContain('class="ok">hardened ✓</a>');
+  it("draws one timeline strip per runtime with violation rings only where they apply", () => {
+    const html = render("naive");
+    expect(html.match(/class="lane-row"/g)).toHaveLength(3);
+    expect(html.match(/class="violation"/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="naive: 3 events, 1 faults, 2 refunds, 0 labels"');
   });
 
-  it("reports a hash mismatch", () => {
-    expect(render("hardened", "mismatch")).toContain("✖ file does not match");
-    expect(render("hardened", "verified")).toContain("✓ matches the file");
+  it("shows hardened's ledger steps with their tone", () => {
+    const html = render("hardened");
+    expect(html).toContain('<span class="step unsure" title="trace event #1">UNKNOWN #1</span>');
+    expect(html).toContain("reconcile: applied → CONFIRMED #2");
+    expect(html).toContain("All nine invariants hold for this run.");
+  });
+
+  it("reports whether the trace file matches its hash", () => {
+    expect(render("hardened", "mismatch")).toContain("trace file does not match its hash");
+    expect(render("hardened")).toContain("trace file matches its hash");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DataError, parseIndex, presentRuntimes } from "./data";
+import { DataError, parseIndex } from "./data";
 import { counts, fixtureIndex } from "./fixture";
 
 describe("parseIndex", () => {
@@ -25,11 +25,5 @@ describe("parseIndex", () => {
     const index = parseIndex(exported);
     expect(index.seeds[0]?.seed).toBe(1);
     expect(index.summary.runtimes.hardened?.total_violating_seeds).toBe(0);
-  });
-});
-
-describe("presentRuntimes", () => {
-  it("uses the report order and skips absent runtimes", () => {
-    expect(presentRuntimes({ naive: counts(), hardened: counts() })).toEqual(["hardened", "naive"]);
   });
 });

@@ -1,13 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CountsTable, Results } from "./Results";
+import { InvariantMatrix, Results, RuntimeBars } from "./Results";
 import { fixtureIndex } from "./fixture";
 
 describe("Results", () => {
   const html = renderToStaticMarkup(<Results index={fixtureIndex()} />);
 
-  it("states the headline from the data", () => {
-    expect(html).toContain("Violating seeds out of 10: hardened 0 · keyed 1 · naive 2");
+  it("shows each runtime's failed and passed seeds from the data", () => {
+    expect(html).toContain('aria-label="naive: 2 of 10 seeds failed"');
+    expect(html).toContain('<span class="fail-n">1</span> failed, <span class="pass-n">9</span> passed');
   });
 
   it("makes only non-zero counts selectable", () => {
@@ -15,13 +16,21 @@ describe("Results", () => {
   });
 
   it("renders null counts as n/a", () => {
-    expect(html).toContain('<td class="na">n/a</td>');
+    expect(html).toContain('<td class="cell na">n/a</td>');
   });
 });
 
-describe("CountsTable", () => {
+describe("RuntimeBars", () => {
+  it("orders runtimes naive, keyed, hardened", () => {
+    const html = renderToStaticMarkup(<RuntimeBars seeds={10} runtimes={fixtureIndex().summary.runtimes} />);
+    const order = [...html.matchAll(/<span class="name">(\w+)<\/span>/g)].map((m) => m[1]);
+    expect(order).toEqual(["naive", "keyed", "hardened"]);
+  });
+});
+
+describe("InvariantMatrix", () => {
   it("is read-only without a select handler", () => {
-    const html = renderToStaticMarkup(<CountsTable runtimes={fixtureIndex().summary.runtimes} />);
+    const html = renderToStaticMarkup(<InvariantMatrix seeds={10} runtimes={fixtureIndex().summary.runtimes} />);
     expect(html).not.toContain("<button");
   });
 });

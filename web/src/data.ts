@@ -105,10 +105,3 @@ export function parseIndex(raw: unknown): SiteIndex {
   seeds.forEach(checkSeed);
   return raw as unknown as SiteIndex;
 }
-
-/** Runtimes present in a runtimes map, in the report's fixed order. */
-export function presentRuntimes(
-  runtimes: Partial<Record<RuntimeName, Counts>>,
-): RuntimeName[] {
-  return (["hardened", "keyed", "naive"] as const).filter((name) => runtimes[name]);
-}

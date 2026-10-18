@@ -452,3 +452,14 @@ Failed approach: none
 Verified: make test (703 passed), make lint clean, npm test (34 passed), npm run e2e (2 passed), both workflow files parse as YAML; neither workflow has run on GitHub yet
 Risk: Pages must be enabled in repo settings (Source: GitHub Actions) or the deploy job fails; the live URL is unverified until then
 Handoff: human reviews F4, merges F1-F4 in order, enables Pages
+
+---
+
+## F5 | 2026-10-18 | agent: claude | status: done
+Changed: web/src (App, Results, Seed, new Sidebar and Timeline, trace.ts tones, styles.css, tests), web/index.html (IBM Plex via Google Fonts), web/e2e, STATE.md, LOG.md
+Decision: human asked for a harness-style UI. ARCHITECTURE F5: static SVG timeline (one strip per runtime, by event index, refunds/labels/faults marked, violation rings), no scrubber or animation. Seed page loads all three traces and checks each hash; removed the now-unused presentRuntimes
+Surprise: none
+Failed approach: first screenshot hit the preview server before it listened; waited for it
+Verified: make test (703 passed), make lint clean, tsc clean, npm test (35 passed), npm run e2e (3 passed); checked overview, seed 1 naive and hardened, expanded event, 390px width in a browser
+Risk: fonts load from Google Fonts at runtime (system fonts as fallback)
+Handoff: human reviews F5

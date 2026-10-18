@@ -84,10 +84,10 @@ describe("ledger and world effects", () => {
       event(8, "refund.issued"),
     ]);
     expect(steps.get("issue_refund")).toEqual([
-      { seq: 5, label: "UNKNOWN" },
-      { seq: 7, label: "reconcile: applied → CONFIRMED" },
+      { seq: 5, label: "UNKNOWN", tone: "unsure" },
+      { seq: 7, label: "reconcile: applied → CONFIRMED", tone: "good" },
     ]);
-    expect(steps.get("create_label")).toEqual([{ seq: 6, label: "denied P5" }]);
+    expect(steps.get("create_label")).toEqual([{ seq: 6, label: "denied P5", tone: "bad" }]);
   });
 
   it("counts what the world recorded", () => {

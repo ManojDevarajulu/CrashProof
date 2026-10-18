@@ -69,17 +69,19 @@ export function violationSeqs(violation: Violation, events: TraceEvent[]): Set<n
   return new Set(events.filter(matches).map((e) => e.seq));
 }
 
-const LEDGER_STEPS: Record<string, string> = {
-  "executor.confirmed": "CONFIRMED",
-  "executor.unknown": "UNKNOWN",
-  "executor.unknown_pending": "UNKNOWN (no reconciler)",
-  "executor.failed": "FAILED",
-  "executor.dedup": "dedup: already CONFIRMED",
-  "executor.denied": "denied",
-  "executor.escalated": "escalated",
-  "executor.exhausted": "attempts exhausted",
-  "reconcile.applied": "reconcile: applied → CONFIRMED",
-  "reconcile.not_applied": "reconcile: not applied → FAILED",
+export type StepTone = "good" | "unsure" | "bad" | "plain";
+
+const LEDGER_STEPS: Record<string, [string, StepTone]> = {
+  "executor.confirmed": ["CONFIRMED", "good"],
+  "executor.unknown": ["UNKNOWN", "unsure"],
+  "executor.unknown_pending": ["UNKNOWN (no reconciler)", "unsure"],
+  "executor.failed": ["FAILED", "bad"],
+  "executor.dedup": ["dedup: already CONFIRMED", "plain"],
+  "executor.denied": ["denied", "bad"],
+  "executor.escalated": ["escalated", "plain"],
+  "executor.exhausted": ["attempts exhausted", "bad"],
+  "reconcile.applied": ["reconcile: applied → CONFIRMED", "good"],
+  "reconcile.not_applied": ["reconcile: not applied → FAILED", "bad"],
 };
 
 export function isLedgerEvent(e: TraceEvent): boolean {
@@ -89,18 +91,19 @@ export function isLedgerEvent(e: TraceEvent): boolean {
 export interface LedgerStep {
   seq: number;
   label: string;
+  tone: StepTone;
 }
 
 /** Ledger history per effect type, from the executor and reconcile events. */
 export function ledgerSteps(events: TraceEvent[]): Map<string, LedgerStep[]> {
   const steps = new Map<string, LedgerStep[]>();
   for (const e of events) {
-    const base = LEDGER_STEPS[e.event];
+    const known = LEDGER_STEPS[e.event];
     const effect = e.data.effect_type;
-    if (base === undefined || typeof effect !== "string") continue;
+    if (known === undefined || typeof effect !== "string") continue;
     const rule = typeof e.data.rule_id === "string" ? ` ${e.data.rule_id}` : "";
     const list = steps.get(effect) ?? [];
-    list.push({ seq: e.seq, label: base + rule });
+    list.push({ seq: e.seq, label: known[0] + rule, tone: known[1] });
     steps.set(effect, list);
   }
   return steps;
