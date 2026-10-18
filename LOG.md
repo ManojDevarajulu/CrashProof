@@ -337,3 +337,14 @@ Risk: none
 Handoff: ready for PR 1 (License & Built on) on feature branch
 
 
+
+---
+
+## PR 1 | 2026-10-18 | agent: claude | status: done
+Changed: LICENSE (new), README.md, STATE.md, LOG.md
+Decision: LICENSE is outside the ARCHITECTURE.md layout; created on the human's explicit instruction
+Surprise: none
+Failed approach: none
+Verified: pytest (691 passed incl. tests/test_readme.py 21 passed), make lint clean
+Risk: none
+Handoff: human reviews PR
