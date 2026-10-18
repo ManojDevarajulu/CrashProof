@@ -45,10 +45,14 @@
 - Correction (C3-3 step 0, hardened, seeds 1..1000): P3 denies in 86 seeds (of which 68 end closed, 13 scan_timeout, 5 denied_P2), so P3 denials are not terminal; P1 and P5 deny in 0 seeds. The README Limitations bullet saying P1, P3 and P5 produce no hardened denial is corrected accordingly; the earlier 200-seed note in the Decisions section is not edited.
 - Correction: docs/DESIGN.md and docs/design.html as committed were drafted by a Claude agent and edited by the human; the earlier entry saying an agent draft is never committed as the final text is superseded. The README-claims entry's clause that P1, P3 and P5 produce no hardened denial is superseded by the P3 correction: P3 denies in 86 seeds; P1 and P5 never deny. Pre-send audit fixes were applied in one commit.
 - Workflow: development moves to feature branches with one pull request per task containing Intent, Trade-offs, and Verification.
+- Interactive React + TypeScript trace viewer in `web/` (Vite, Vitest, Playwright) deployed to GitHub Pages via existing CI; `make site` export target for static simulation replays and summary.
+- One real provider adapter: Stripe test-mode refunds behind a `RefundProvider` protocol that the simulated refund service also implements. Stdlib urllib only (no new dependency); the key is sent as Idempotency-Key, the reference (workflow_id) as refund metadata; lookup by reference lists the PaymentIntent's refunds and filters metadata, because Stripe prunes keys after 24 hours. A file-backed sqlite ledger option for a real crash and restart. Runs only under a human-run `make demo-real` with a test-mode key (rejects live keys); `make test` and `make eval` stay offline, with contract tests replaying recorded responses. Needs a Rule 4 scan-test exemption for the adapter file, the same as agent/llm.py. Every simulated trace_hash and the 1,000-seed summary must stay byte-identical.
 
 ## Scope change requests
 
 - CI workflow (.github/workflows/ci.yml) and test_readme_has_no_urls exception for GitHub Actions workflow badge and run URL approved by human.
+- Interactive React + TypeScript trace viewer in `web/` (Vite, Vitest, Playwright) deployed to GitHub Pages via existing CI; `make site` export target for static simulation replays and summary (approved).
+- One real provider adapter: Stripe test-mode refunds behind a `RefundProvider` protocol that the simulated refund service also implements (approved).
 
 
 ## Pending approval

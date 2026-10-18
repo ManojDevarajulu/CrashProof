@@ -24,9 +24,10 @@ hardened) over S seeds, from measured runs only.
 4. **Determinism is sacred.** In `src/`, never use `datetime.now`, `time.time`,
    `time.sleep`, module-level `random`, `uuid4`, `os.urandom`, network I/O,
    threads or asyncio. Use `clock.py`, `rng.py`, `ids.py`. A test enforces this.
-   Exemptions, exactly two: rng.py may use random.Random(seed) instances;
-   agent/llm.py is the only file allowed network I/O and runs only under
-   `make record`. The scan test allowlists exactly these two.
+   Exemptions, exactly three: rng.py may use random.Random(seed) instances;
+   agent/llm.py is allowed network I/O and runs only under `make record`;
+   adapters/stripe_refunds.py is allowed network I/O and runs only under
+   `make demo-real` with a test-mode key. The scan test allowlists these three.
 5. **One task at a time.** Finish, test, report. No unrelated refactors.
 6. **Tests before done.** `make test` and `make lint` must pass. Never skip or
    delete tests.
@@ -71,16 +72,17 @@ bus; ScriptedAgent and LLMAgent (cassette record/replay); three runtimes:
 naive, keyed (Cut 2) and hardened (state machine, effects ledger, idempotency,
 reconciliation, policy engine, audit log); seeded scenario generator and fault injector;
 invariant checker; CLI `eval`, `replay`, `report`, `record`; one static HTML trace
-viewer (Cut 3); docs,viewer (Cut 3); CI workflow (.github/workflows/ci.yml) running lint, test, 200-seed eval, and hardened replay hash check; docs.;
+viewer (Cut 3); interactive React + TypeScript trace viewer in web/ (Vite, Vitest, Playwright)
+deployed to GitHub Pages; one Stripe test-mode refund adapter run only by make demo-real;
+CI workflow (.github/workflows/ci.yml) running lint, test, 200-seed eval, and hardened replay hash check; docs.
 
-OUT OF SCOPE (do not build, scaffold or "prepare for"): real integrations;
-HTTP servers or FastAPI; auth, users, multi-tenancy; any frontend framework or
-chart library; other workflows (tracking, transport, tickets, exchanges);
-Postgres, Redis, Kafka, Celery, Temporal or any external service; Docker, K8s,
-cloud deploy; fine-tuning, RAG, embeddings, agent frameworks (LangChain
-etc.); OpenTelemetry; premature optimization; currency, tax, shipping-cost,
-inventory logic; plugin systems, config frameworks, speculative abstractions;
-rewrites in other languages.
+OUT OF SCOPE (do not build, scaffold or "prepare for"): HTTP servers or FastAPI;
+auth, users, multi-tenancy; any chart library; other workflows (tracking,
+transport, tickets, exchanges); Postgres, Redis, Kafka, Celery, Temporal or any
+external service; Docker, K8s, cloud deploy (except GitHub Pages for web/);
+fine-tuning, RAG, embeddings, agent frameworks (LangChain etc.); OpenTelemetry;
+premature optimization; currency, tax, shipping-cost, inventory logic;
+plugin systems, config frameworks, speculative abstractions; rewrites in other languages.
 
 Scope change requests go in `docs/DECISIONS.md`. Do not implement them.
 
@@ -92,6 +94,7 @@ pytest, ruff. LLM: Gemini via Vertex AI with the `google-genai` SDK, used only
 in `src/crashproof/agent/llm.py`; project, location and model come from env vars
 `GCP_PROJECT`, `GCP_LOCATION`, `GEMINI_MODEL`; Application Default Credentials;
 never commit keys. Concurrency: single-threaded discrete-event scheduler.
+Frontend (web/): Node 20+, npm, Vite, React 18+, TypeScript (strict), Vitest, Playwright.
 
 ## 5. Cuts and gates (full detail in docs/ARCHITECTURE.md)
 
