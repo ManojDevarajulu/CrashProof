@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          make setup PYTHON=python
+          .venv/bin/pip install -e ".[llm]"
+
+      - name: Lint and type-check
+        run: make lint
+
+      - name: Run test suite
+        run: make test
+
+      - name: Run 200-seed simulation evaluation
+        run: make eval SEEDS=200
+
+      - name: Verify Seed 1 Hardened Deterministic Replay Hash
+        run: |
+          OUTPUT=$(make replay SEED=1 RUNTIME=hardened)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -q "32571347ac4fa35e59a9960eaeb97e3f05ce59bbf7184fe1f1eb4bdbe012595a"

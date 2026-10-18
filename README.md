@@ -1,5 +1,7 @@
 # Crashproof
 
+[![CI](https://github.com/ManojDevarajulu/CrashProof/actions/workflows/ci.yml/badge.svg)](https://github.com/ManojDevarajulu/CrashProof/actions/workflows/ci.yml)
+
 Under injected faults, a naive returns agent breaks a safety invariant on 747 of 1,000 simulated seeds. Adding idempotency keys brings that to 631. The hardened runtime: 0. Every failure replays exactly from its seed.
 
 Crashproof is a deterministic simulation harness that tests whether the runtime around an agent keeps money-moving actions (return labels, refunds) safe when the systems around it fail. The headline results use a scripted agent; a separate 3-seed smoke test used a recorded language model (see below). Everything is a simulation; see Limitations.

@@ -371,4 +371,16 @@ Verified: pytest (692 passed incl. tests/test_readme.py 21 passed), make lint cl
 Risk: none
 Handoff: ready for human review of PR 3, then PR 4 (GitHub Actions CI)
 
+---
+
+## PR 4 | 2026-10-18 | agent: antigravity | status: done
+Changed: .github/workflows/ci.yml (new), tests/test_readme.py, README.md, STATE.md, LOG.md
+Decision: CI runs lint, test, 200-seed eval, and verifies hardened replay hash equals 32571347...595a; test_readme allows CI badge URL
+Surprise: none
+Failed approach: none
+Verified: pytest (692 passed incl. tests/test_readme.py 21 passed), make lint clean, replay hash verified
+Risk: none
+Handoff: ready for human review of PR 4, then PR 5 (Clean clone verification & GitHub topics)
+
+
 
