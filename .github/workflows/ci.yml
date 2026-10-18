@@ -20,7 +20,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: make setup PYTHON=python
+        run: |
+          make setup PYTHON=python
+          .venv/bin/pip install -e ".[llm]"
 
       - name: Lint and type-check
         run: make lint
