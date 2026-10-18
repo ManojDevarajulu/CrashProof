@@ -139,7 +139,12 @@ def test_readme_mentions_simulation_and_limitations() -> None:
 
 def test_readme_has_no_urls() -> None:
     text = readme_text()
-    assert "http://" not in text and "https://" not in text
+    badge_pattern = (
+        r"\[!\[CI\]\(https://github\.com/ManojDevarajulu/CrashProof/actions/workflows/ci\.yml/badge\.svg\)"
+        r"\]\(https://github\.com/ManojDevarajulu/CrashProof/actions/workflows/ci\.yml\)"
+    )
+    stripped = re.sub(badge_pattern, "", text)
+    assert "http://" not in stripped and "https://" not in stripped
 
 
 def test_readme_make_commands_exist_in_makefile() -> None:
