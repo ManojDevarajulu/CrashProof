@@ -348,3 +348,15 @@ Failed approach: none
 Verified: pytest (691 passed incl. tests/test_readme.py 21 passed), make lint clean
 Risk: none
 Handoff: human reviews PR
+
+---
+
+## PR 2 | 2026-10-18 | agent: antigravity | status: done
+Changed: README.md, src/crashproof/sim/report.py, src/crashproof/cli.py, tests/test_readme.py, tests/test_report.py, STATE.md, LOG.md
+Decision: build_readme_report outputs compact summary for README; full summary remains in results/summary.md
+Surprise: none
+Failed approach: none
+Verified: pytest (692 passed), ruff clean, mypy --strict clean, make readme tested
+Risk: none
+Handoff: ready for human review of PR 2, then PR 3 (How it was built)
+

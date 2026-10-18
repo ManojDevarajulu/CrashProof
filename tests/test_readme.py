@@ -157,8 +157,10 @@ def test_readme_is_lf_with_one_trailing_newline() -> None:
 
 
 def test_readme_block_matches_current_summary() -> None:
-    report = _ROOT / "results" / "summary.md"
+    report = _ROOT / "results" / "summary_readme.md"
     if not report.exists():
-        pytest.skip("results/summary.md not generated; run make report")
+        report = _ROOT / "results" / "summary.md"
+    if not report.exists():
+        pytest.skip("results/summary_readme.md not generated; run make report")
     expected = splice_results(readme_text(), report.read_text(encoding="utf-8"))
     assert readme_text() == expected, "README.md is stale; run make readme"

@@ -4,6 +4,22 @@ Under injected faults, a naive returns agent breaks a safety invariant on 747 of
 
 Crashproof is a deterministic simulation harness that tests whether the runtime around an agent keeps money-moving actions (return labels, refunds) safe when the systems around it fail. The headline results use a scripted agent; a separate 3-seed smoke test used a recorded language model (see below). Everything is a simulation; see Limitations.
 
+### One failure, end to end (seed 1)
+
+Seed 1 is a normal return on carrier C. After the refund is issued, the response is lost (fault F2, a timeout after the effect is applied) and the agent retries.
+
+- **naive:** seq 16 `refund.issued` rfd-000001, seq 18 `fault.F2`, seq 21 `refund.issued` rfd-000002. Two refunds of 8842 against an order that paid 8842 (I1 and I2).
+- **hardened:** the same fault at seq 30. The effect is marked unknown (seq 31, `executor.unknown`), the runtime asks the refund service by key and finds it applied (seq 35, `reconcile.applied`). One refund.
+
+Reproduce it:
+
+```
+make replay SEED=1 RUNTIME=naive
+make replay SEED=1 RUNTIME=hardened
+```
+
+Then load results/replay/seed-1-naive.jsonl and seed-1-hardened.jsonl in viewer/index.html. The hardened replay's SHA-256 is 32571347ac4fa35e59a9960eaeb97e3f05ce59bbf7184fe1f1eb4bdbe012595a. Steps are in docs/DEMO.md.
+
 Links: [design notes](docs/DESIGN.md) ([formatted](docs/design.html)), [trace viewer](viewer/index.html), [invariants](docs/INVARIANTS.md), [architecture](docs/ARCHITECTURE.md).
 
 A seed fixes one simulated order, return, customer behaviour and fault schedule. Three runtimes face the same agent, seeds and faults:
@@ -33,14 +49,6 @@ Nine invariants are checked on every run (full definitions in docs/INVARIANTS.md
 | keyed | 1000 | 0 + 112 | 0 | 286 + 176 | n/a | 160 | 0 | 631 |
 | naive | 1000 | 214 + 277 | 208 | 286 + 176 | n/a | 160 | 0 | 747 |
 
-### Seeds with at least one violation, per invariant
-
-| Runtime | I1 | I2 | I3 | I4 | I5 | I6 | I7 | I8 | I9 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| hardened | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| keyed | 0 | 0 | 286 | 176 | 112 | n/a | 160 | n/a | 0 |
-| naive | 214 | 208 | 286 | 176 | 277 | n/a | 160 | n/a | 0 |
-
 ### How to read this
 
 - Each cell counts seeds, not events.
@@ -57,22 +65,6 @@ Nine invariants are checked on every run (full definitions in docs/INVARIANTS.md
 | keyed | 3 | 0 + 0 | 0 | 2 + 0 | n/a | 0 | 0 | 2 |
 | naive | 3 | 1 + 0 | 1 | 2 + 0 | n/a | 0 | 0 | 3 |
 
-### Seeds with at least one violation, per invariant
-
-| Runtime | I1 | I2 | I3 | I4 | I5 | I6 | I7 | I8 | I9 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| hardened | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| keyed | 0 | 0 | 2 | 0 | 0 | n/a | 0 | n/a | 0 |
-| naive | 1 | 1 | 2 | 0 | 0 | n/a | 0 | n/a | 0 |
-
-### How the recorded runs ended
-
-| Runtime | Seeds recorded | Seeds skipped | Malformed output | Step cap | Call budget | Mean agent steps |
-| --- | --- | --- | --- | --- | --- | --- |
-| hardened | 3 | 0 | 0 | 0 | 0 | 5.33 |
-| keyed | 3 | 0 | 0 | 0 | 0 | 7.33 |
-| naive | 3 | 0 | 0 | 0 | 0 | 7.33 |
-
 Model: gemini-2.5-flash-lite. Separate from the ScriptedAgent results above.
 
 One recorded run of one model on a small seed set; not a statistical estimate.
@@ -87,27 +79,11 @@ One recorded run of one model on a small seed set; not a statistical estimate.
 - Idempotency keys fix duplicate refunds but not duplicate labels on a provider that ignores keys, policy or liveness failures.
 - Deliberately broken versions of hardened are caught by the invariants, so the zeros are not vacuous.
 
-### One failure, end to end (seed 1)
-
-Seed 1 is a normal return on carrier C. After the refund is issued, the response is lost (fault F2, a timeout after the effect is applied) and the agent retries.
-
-- **naive:** seq 16 `refund.issued` rfd-000001, seq 18 `fault.F2`, seq 21 `refund.issued` rfd-000002. Two refunds of 8842 against an order that paid 8842 (I1 and I2).
-- **hardened:** the same fault at seq 30. The effect is marked unknown (seq 31, `executor.unknown`), the runtime asks the refund service by key and finds it applied (seq 35, `reconcile.applied`). One refund.
-
-Reproduce it:
-
-```
-make replay SEED=1 RUNTIME=naive
-make replay SEED=1 RUNTIME=hardened
-```
-
-Then load results/replay/seed-1-naive.jsonl and seed-1-hardened.jsonl in viewer/index.html. The hardened replay's SHA-256 is 32571347ac4fa35e59a9960eaeb97e3f05ce59bbf7184fe1f1eb4bdbe012595a. Steps are in docs/DEMO.md.
-
 ### Why idempotency keys are not enough
 
-- Keys remove duplicate refunds in the measured runs (keyed shows no I1 or I2 violations). The simulated refund service always supports keys, so this part is true by construction.
-- Carrier B ignores keys. There, keyed creates a second label in 112 seeds (I5). Hardened does not, because it looks the label up by reference before retrying.
-- Keys do nothing about policy or liveness. Keyed refunds before the scan or for ineligible orders in 286 seeds, above the cap without approval in 176, and leaves 160 workflows open. Those gaps follow from keyed having no policy engine or scan timeout, so the comparison measures what each design includes.
+- **Carrier B ignores keys:** Keyed issues duplicate labels on 112 seeds (I5); hardened looks up by reference before retrying.
+- **Keys ignore policy:** Keyed refunds before return scans in 286 seeds (I3) and exceeds the refund cap without approval in 176 seeds (I4).
+- **Keys ignore liveness:** Keyed leaves 160 workflows open forever without scan timeouts (I7).
 
 ### Do the checks catch bugs?
 

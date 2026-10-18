@@ -20,7 +20,7 @@ from crashproof.agent.llm import (
 )
 from crashproof.config import ScenarioConfig, load_scenario_config
 from crashproof.models import Json
-from crashproof.sim.report import build_report, splice_results
+from crashproof.sim.report import build_readme_report, build_report, splice_results
 from crashproof.sim.runner import (
     AgentFactory,
     RunResult,
@@ -324,13 +324,17 @@ def _report() -> int:
         return 2
     path = _RESULTS / "summary.md"
     path.write_bytes(build_report(summary).encode("utf-8"))
+    readme_path = _RESULTS / "summary_readme.md"
+    readme_path.write_bytes(build_readme_report(summary).encode("utf-8"))
     print(path)
     return 0
 
 
 def _readme() -> int:
     readme = Path("README.md")
-    report = _RESULTS / "summary.md"
+    report = _RESULTS / "summary_readme.md"
+    if not report.is_file():
+        report = _RESULTS / "summary.md"
     for path in (readme, report):
         if not path.is_file():
             print(f"error: {path} not found")
