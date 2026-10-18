@@ -153,3 +153,78 @@ footer {
   margin-top: 3rem;
   padding-top: 1rem;
 }
+
+.ok {
+  color: var(--ok);
+}
+
+h3 {
+  font-size: 0.95rem;
+  margin: 1.5rem 0 0.25rem;
+}
+
+select {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  color: inherit;
+  font: inherit;
+  margin-left: 1rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.tabs a {
+  text-decoration: none;
+}
+
+.tabs a[aria-current="page"] {
+  border-bottom: 2px solid currentColor;
+  font-weight: bold;
+}
+
+td .tabs {
+  justify-content: flex-start;
+}
+
+.ledger {
+  margin: 0;
+}
+
+.ledger div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.ledger dt {
+  font-weight: bold;
+  min-width: 8rem;
+}
+
+.ledger dd {
+  margin: 0;
+}
+
+.trace td,
+.trace th {
+  text-align: left;
+}
+
+.trace .data {
+  white-space: normal;
+  word-break: break-all;
+  min-width: 20rem;
+}
+
+.trace tr.fault {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.trace tr.hit {
+  background: var(--accent-bg);
+  color: var(--accent);
+}

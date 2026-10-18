@@ -8,6 +8,7 @@ import {
   type RuntimeName,
   type SiteIndex,
 } from "./data";
+import { RuntimeTabs } from "./Seed";
 
 interface Selection {
   runtime: RuntimeName;
@@ -127,6 +128,33 @@ export function Results({ index }: { index: SiteIndex }) {
         missing components, not only from faults.
       </p>
       {selected && <SeedList index={index} selection={selected} />}
+      <h2>Seeds with traces on this site</h2>
+      <p className="muted">
+        Seed 1, then the lowest failing seeds of each runtime and invariant, chosen by{" "}
+        <code>make site</code>.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">seed</th>
+            <th scope="col">carrier</th>
+            <th scope="col">behavior</th>
+            <th scope="col">runtimes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {index.seeds.map((entry) => (
+            <tr key={entry.seed}>
+              <th scope="row">{entry.seed}</th>
+              <td>{String(entry.scenario.carrier)}</td>
+              <td>{String(entry.scenario.behavior)}</td>
+              <td>
+                <RuntimeTabs entry={entry} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       {llm && (
         <>
           <h2>LLM agent ({llm.seeds.length} recorded seeds, separate from the table above)</h2>

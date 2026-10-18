@@ -430,3 +430,14 @@ Failed approach: none
 Verified: make test (703 passed), make lint clean, npm test (11 passed incl. real index.json), npm run build ok; page checked in a browser (table, seed list, LLM table)
 Risk: CI exports site data from the 200-seed eval; the deploy (F4) must use 1000 seeds
 Handoff: human reviews F2
+
+---
+
+## F3 | 2026-10-18 | agent: claude | status: done
+Changed: web/src (Seed.tsx, trace.ts, route.ts, App.tsx, Results.tsx, styles.css, tests), STATE.md, LOG.md
+Decision: merges ARCHITECTURE F4 and the text part of F5; no SVG timeline. Ledger steps come only from executor/reconcile events (INTENDED and EXECUTING are not traced, so not shown); highlighted rows follow the violation detail (named refund for I3/I4, all refunds for I1/I2, all labels for I5, none for I7); the browser re-hashes each JSONL and shows match or mismatch
+Surprise: none
+Failed approach: none
+Verified: npm test (34 passed incl. seed 1: naive 2 refunds, hardened 1 refund via UNKNOWN then reconcile, hash equals README), npm run build ok; checked in a browser at desktop and 390px width
+Risk: none
+Handoff: human reviews F3
