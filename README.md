@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/ManojDevarajulu/CrashProof/actions/workflows/ci.yml/badge.svg)](https://github.com/ManojDevarajulu/CrashProof/actions/workflows/ci.yml)
 
+**[Live results and trace viewer](https://manojdevarajulu.github.io/CrashProof/)**: click any failing count to open its trace.
+
 Under injected faults, a naive returns agent breaks a safety invariant on 747 of 1,000 simulated seeds. Adding idempotency keys brings that to 631. The hardened runtime: 0. Every failure replays exactly from its seed.
 
 Crashproof is a deterministic simulation harness that tests whether the runtime around an agent keeps money-moving actions (return labels, refunds) safe when the systems around it fail. The headline results use a scripted agent; a separate 3-seed smoke test used a recorded language model (see below). Everything is a simulation; see Limitations.
@@ -115,6 +117,8 @@ make replay SEED=1 RUNTIME=naive
 This reproduces the table above; SEEDS=200 is a faster smoke run. Some tests skip until an eval has produced results/summary.json.
 
 To refresh the results block above after an eval, run `make readme`.
+
+To run the web viewer locally (Node 20+): `make site`, then `npm ci` and `npm run dev` in `web/`.
 
 To inspect a replay, open viewer/index.html in a browser and choose the file results/replay/seed-1-naive.jsonl. The viewer shows the SHA-256 of the file, which equals the hash printed by make replay. If your browser shows "SHA-256 unavailable" for a local file, serve the folder with python -m http.server and open localhost port 8000 in your browser, then go to the viewer folder.
 

@@ -2,10 +2,10 @@
 <!-- Overwrite this whole file at the end of every task. Max 25 lines. -->
 
 Cut: Frontend F1-F6 / Real adapter R1-R5
-Last completed: F3 Seed screen (runtime tabs, violation highlights, ledger steps, in-browser hash check) and seeds table on Results
-Next task: F4 GitHub Pages deploy, Playwright test, live link in README
-Branch: feat/f3-seed-screen
-Last verified: make test (703 passed), make lint clean, web: vitest 34 passed, vite build ok
+Last completed: F4 Playwright e2e (2 tests) in CI, Pages deploy workflow (1000-seed eval -> make site -> build), README live link
+Next task: awaiting human: review and merge F1-F4 in order, enable Pages (Source: GitHub Actions), approve the README URL exception; then scope freeze
+Branch: feat/f4-pages-e2e
+Last verified: make test (703 passed), make lint clean, web: vitest 34 passed, playwright 2 passed, vite build ok
 Last make eval (1000 seeds), violating seeds: hardened 0, keyed 631, naive 747
 LLM eval (3 seeds), violating seeds: hardened 0, keyed 2, naive 3 (0 malformed outputs)
 Gate 3: passed; repo pushed to https://github.com/ManojDevarajulu/CrashProof

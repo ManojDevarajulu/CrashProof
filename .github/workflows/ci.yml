@@ -54,3 +54,9 @@ jobs:
           npm ci
           npm test
           npm run build
+
+      - name: End-to-end test of the built viewer
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e

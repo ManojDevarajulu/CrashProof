@@ -441,3 +441,14 @@ Failed approach: none
 Verified: npm test (34 passed incl. seed 1: naive 2 refunds, hardened 1 refund via UNKNOWN then reconcile, hash equals README), npm run build ok; checked in a browser at desktop and 390px width
 Risk: none
 Handoff: human reviews F3
+
+---
+
+## F4 | 2026-10-18 | agent: claude | status: done
+Changed: web/e2e/viewer.spec.ts, web/playwright.config.ts, web/package.json, lockfile, tsconfig, .github/workflows/ci.yml, .github/workflows/pages.yml (new), README.md, tests/test_readme.py, docs/DECISIONS.md (pending approval), STATE.md, LOG.md
+Decision: ARCHITECTURE F6. Pages builds from a fresh 1000-seed eval in CI (19s locally), never from committed data. test_readme_has_no_urls allows one more exact URL (the Pages link); logged under Pending approval per Rule 7
+Surprise: a leftover vite preview process held port 4173; stopped it
+Failed approach: none
+Verified: make test (703 passed), make lint clean, npm test (34 passed), npm run e2e (2 passed), both workflow files parse as YAML; neither workflow has run on GitHub yet
+Risk: Pages must be enabled in repo settings (Source: GitHub Actions) or the deploy job fails; the live URL is unverified until then
+Handoff: human reviews F4, merges F1-F4 in order, enables Pages
