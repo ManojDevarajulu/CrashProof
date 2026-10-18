@@ -137,4 +137,3 @@ def test_build_readme_report_excludes_detail_tables() -> None:
     assert "| hardened | 10 | 0 + 0 |" in report
     assert "### Seeds with at least one violation" not in report
     assert "### Failing seed examples" not in report
-
