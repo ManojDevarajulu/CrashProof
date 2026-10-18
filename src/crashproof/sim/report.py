@@ -192,3 +192,63 @@ def splice_results(readme_text: str, report_md: str) -> str:
         raise ValueError("results markers are out of order")
     body = report_md.removesuffix("\n")
     return readme_text[: start + len(_START)] + "\n" + body + "\n" + readme_text[end:]
+
+
+class FailuresFormatError(ValueError):
+    """results/failures.json does not have the shape make eval writes."""
+
+
+def _failure_violations(entry: object) -> tuple[str, int, list[str]]:
+    if not isinstance(entry, Mapping):
+        raise FailuresFormatError(f"entry is not an object: {entry!r}")
+    runtime, seed, violations = (
+        entry.get(k) for k in ("runtime", "seed", "violations")
+    )
+    if not isinstance(runtime, str) or not isinstance(seed, int):
+        raise FailuresFormatError(f"bad runtime or seed: {entry!r}")
+    if not isinstance(violations, list):
+        raise FailuresFormatError(f"violations is not a list: {entry!r}")
+    names = []
+    for violation in violations:
+        if not isinstance(violation, Mapping) or not isinstance(
+            violation.get("invariant"), str
+        ):
+            raise FailuresFormatError(f"bad violation: {violation!r}")
+        names.append(str(violation["invariant"]))
+    return runtime, seed, names
+
+
+def invariant_seeds(failures: Sequence[object]) -> dict[str, dict[str, list[int]]]:
+    """Seeds failing each invariant, per runtime, sorted and without repeats."""
+    found: dict[str, dict[str, set[int]]] = {}
+    for entry in failures:
+        runtime, seed, names = _failure_violations(entry)
+        per_runtime = found.setdefault(runtime, {})
+        for name in names:
+            per_runtime.setdefault(name, set()).add(seed)
+    return {
+        runtime: {name: sorted(seeds) for name, seeds in sorted(per_inv.items())}
+        for runtime, per_inv in sorted(found.items())
+    }
+
+
+def select_site_seeds(
+    by_invariant: Mapping[str, Mapping[str, Sequence[int]]], limit: int
+) -> list[int]:
+    """Seed 1 first, then round-robin over (runtime, invariant) pairs in a fixed
+    order, each time taking that pair's smallest seed not yet chosen."""
+    chosen = [1]
+    queues = [
+        list(by_invariant[runtime][name])
+        for runtime in _RUNTIME_ORDER
+        if runtime in by_invariant
+        for name in _INVARIANTS
+        if by_invariant[runtime].get(name)
+    ]
+    while len(chosen) < limit and any(queues):
+        for queue in queues:
+            while queue and queue[0] in chosen:
+                queue.pop(0)
+            if queue and len(chosen) < limit:
+                chosen.append(queue.pop(0))
+    return sorted(chosen)

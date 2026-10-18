@@ -408,3 +408,14 @@ Handoff: start task F1 on branch feat/f1-site-exporter
 
 
 
+
+---
+
+## F1 | 2026-10-18 | agent: claude | status: done
+Changed: src/crashproof/cli.py, src/crashproof/sim/report.py, tests/test_site.py (new), Makefile, .gitignore, STATE.md, LOG.md
+Decision: replaced an uncommitted draft (saved as a patch outside the repo): it had hand-written seed descriptions with unverified counts, an except-pass, and a make_scenario call missing its ids argument. Seeds are chosen by a fixed rule (seed 1, then round-robin over failing runtime x invariant pairs); scenario facts come from the trace; web/public/data/ is gitignored
+Surprise: the runner omits scenario.carrier for carrier A, so the export fills carrier A explicitly
+Failed approach: none
+Verified: make test (703 passed), make lint clean, make site; per-invariant seed counts equal summary.json; 1000-seed eval reran in 19s with byte-identical summary.json and failures.json
+Risk: none
+Handoff: human reviews F1

@@ -20,7 +20,14 @@ from crashproof.agent.llm import (
 )
 from crashproof.config import ScenarioConfig, load_scenario_config
 from crashproof.models import Json
-from crashproof.sim.report import build_readme_report, build_report, splice_results
+from crashproof.sim.report import (
+    FailuresFormatError,
+    build_readme_report,
+    build_report,
+    invariant_seeds,
+    select_site_seeds,
+    splice_results,
+)
 from crashproof.sim.runner import (
     AgentFactory,
     RunResult,
@@ -32,6 +39,9 @@ from crashproof.sim.scenario import Scenario
 
 _INVARIANTS = ("I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9")
 _RESULTS = Path("results")
+_SITE_DATA = Path("web/public/data")
+_SITE_SEED_LIMIT = 20
+_SITE_RUNTIMES: tuple[RuntimeKind, ...] = ("naive", "keyed", "hardened")
 _CASSETTES = Path("tests/cassettes")
 _RECORD_SUMMARY = "_record_summary.json"
 _ENDED = (
@@ -84,6 +94,7 @@ def _parser() -> argparse.ArgumentParser:
     rec.add_argument("--seeds", type=_record_seeds, required=True)
     sub.add_parser("report", help="write results/summary.md from results/summary.json")
     sub.add_parser("readme", help="splice results/summary.md into README.md")
+    sub.add_parser("site", help="export summary and seed replays to web/public/data")
     return parser
 
 
@@ -351,6 +362,79 @@ def _readme() -> int:
     return 0
 
 
+class SiteInputError(Exception):
+    """A results file that make site needs is missing or malformed."""
+
+
+def _read_results_json(name: str) -> Json:
+    path = _RESULTS / name
+    try:
+        value: Json = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise SiteInputError(f"{path} not found; run make eval first") from None
+    except json.JSONDecodeError as error:
+        raise SiteInputError(f"{path} is not valid JSON: {error}") from None
+    return value
+
+
+def _scenario_facts(trace_bytes: bytes) -> dict[str, Json]:
+    """Merge the data of the scenario.* events at the head of a trace."""
+    facts: dict[str, Json] = {}
+    for line in trace_bytes.decode("utf-8").splitlines():
+        event = json.loads(line)
+        if not str(event["event"]).startswith("scenario."):
+            break
+        facts.update(event["data"])
+    # The runner records scenario.carrier only for carriers B and C.
+    facts.setdefault("carrier", "A")
+    return facts
+
+
+def _site_seed(seed: int, config: ScenarioConfig, replays: Path) -> Json:
+    runtimes: dict[str, Json] = {}
+    facts: dict[str, Json] = {}
+    for kind in _SITE_RUNTIMES:
+        result = run_seed(seed, kind, config)
+        (replays / f"seed-{seed}-{kind}.jsonl").write_bytes(result.trace_bytes)
+        facts = _scenario_facts(result.trace_bytes)
+        runtimes[kind] = {
+            "outcome": result.outcome,
+            "restarts": result.restarts,
+            "trace_hash": result.trace_hash,
+            "violations": [
+                {"invariant": v.invariant, "detail": v.detail}
+                for v in result.violations
+            ],
+        }
+    return {"seed": seed, "scenario": facts, "runtimes": runtimes}
+
+
+def _site(config: ScenarioConfig) -> int:
+    try:
+        summary = _read_results_json("summary.json")
+        failures = _read_results_json("failures.json")
+        if not isinstance(summary, dict) or not isinstance(failures, list):
+            raise SiteInputError("summary.json must be an object, failures.json a list")
+        by_invariant = invariant_seeds(failures)
+    except (SiteInputError, FailuresFormatError) as error:
+        print(f"error: {error}")
+        return 2
+    replays = _SITE_DATA / "replays"
+    replays.mkdir(parents=True, exist_ok=True)
+    for stale in sorted(replays.glob("*.jsonl")):
+        stale.unlink()
+    seeds = select_site_seeds(by_invariant, _SITE_SEED_LIMIT)
+    index: Json = {
+        "generated_by": "make site",
+        "summary": summary,
+        "invariant_seeds": cast(Json, by_invariant),
+        "seeds": [_site_seed(seed, config, replays) for seed in seeds],
+    }
+    _write_json(_SITE_DATA / "index.json", index)
+    print(f"wrote {_SITE_DATA / 'index.json'} and {len(seeds)} seeds x 3 replays")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "report":
@@ -371,6 +455,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return status
     if args.command == "eval":
         return _eval(args.seeds, args.runtimes, config)
+    if args.command == "site":
+        return _site(config)
     return _replay(args.seed, args.runtime, config)
 
 
