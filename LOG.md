@@ -396,3 +396,14 @@ Handoff: portfolio ready for Pango review
 
 
 
+
+---
+
+## PR 3 | 2026-10-18 | agent: claude | status: done
+Changed: README.md, STATE.md, LOG.md
+Decision: branch fix/how-it-was-built already existed and was merged, so used fix/how-it-was-built-section; converted the existing h2 into an h3 under How it works with the five requested bullets
+Surprise: branched from main, which lacks PR 2 (build_readme_report wiring); task 2.4 text was already in PR 2
+Failed approach: none
+Verified: make test (692 passed incl. tests/test_readme.py), make lint clean
+Risk: PR 2 and PR 3 both touch STATE.md and LOG.md, so the second merge will conflict there
+Handoff: human reviews PR 3

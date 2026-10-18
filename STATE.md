@@ -2,10 +2,10 @@
 <!-- Overwrite this whole file at the end of every task. Max 25 lines. -->
 
 Cut: 2 / 3
-Last completed: PR 4 merged; CI green on main; repo metadata (topics & description) configured
-Next task: portfolio ready for review; optional: pin repo on profile / Cut 4 recording
-Branch: main
-Last verified: GitHub Actions CI green (31s, replay hash verified), pytest 692 passed, ruff clean
+Last completed: PR 3: How it was built moved under How it works as h3 (branch fix/how-it-was-built-section)
+Next task: awaiting human (PR 3 review/merge)
+Branch: fix/how-it-was-built-section
+Last verified: make test (692 passed), make lint clean
 Last make eval (1000 seeds), violating seeds: hardened 0, keyed 631, naive 747
 LLM eval (3 seeds), violating seeds: hardened 0, keyed 2, naive 3 (0 malformed outputs)
 Gate 3: passed in clean WSL clone; repo pushed to https://github.com/ManojDevarajulu/CrashProof
