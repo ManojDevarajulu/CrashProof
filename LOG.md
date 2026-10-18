@@ -393,6 +393,18 @@ Verified: GitHub Actions CI green (run 39113262948), gh repo view verified
 Risk: none
 Handoff: portfolio ready for Pango review
 
+---
+
+## PR 5-scope | 2026-10-18 | agent: antigravity | status: done
+Changed: AGENTS.md, docs/ARCHITECTURE.md, docs/DECISIONS.md, STATE.md, LOG.md
+Decision: approved scope expansion for web/ React viewer (F1-F6) and Stripe adapter (R1-R5) merged to main via PR #5
+Surprise: none
+Failed approach: none
+Verified: pytest 692 passed, ruff clean, mypy --strict clean, PR #5 merged cleanly to main
+Risk: none
+Handoff: start task F1 on branch feat/f1-site-exporter
+
+
 
 
 
