@@ -408,3 +408,58 @@ Handoff: start task F1 on branch feat/f1-site-exporter
 
 
 
+
+---
+
+## F1 | 2026-10-18 | agent: claude | status: done
+Changed: src/crashproof/cli.py, src/crashproof/sim/report.py, tests/test_site.py (new), Makefile, .gitignore, STATE.md, LOG.md
+Decision: replaced an uncommitted draft (saved as a patch outside the repo): it had hand-written seed descriptions with unverified counts, an except-pass, and a make_scenario call missing its ids argument. Seeds are chosen by a fixed rule (seed 1, then round-robin over failing runtime x invariant pairs); scenario facts come from the trace; web/public/data/ is gitignored
+Surprise: the runner omits scenario.carrier for carrier A, so the export fills carrier A explicitly
+Failed approach: none
+Verified: make test (703 passed), make lint clean, make site; per-invariant seed counts equal summary.json; 1000-seed eval reran in 19s with byte-identical summary.json and failures.json
+Risk: none
+Handoff: human reviews F1
+
+---
+
+## F2 | 2026-10-18 | agent: claude | status: done
+Changed: web/ (new: package.json, lockfile, tsconfig, vite.config.ts, index.html, src/), .github/workflows/ci.yml, STATE.md, LOG.md
+Decision: merges ARCHITECTURE F2 (scaffold) and F3 (Results screen); deps limited to the AGENTS.md allowlist plus @types/react(-dom), exact-pinned; no plugin-react or testing-library: JSX via tsconfig, components tested with renderToStaticMarkup; hash routing, no router
+Surprise: tsc rejected node:fs in a test (no @types/node); used import.meta.glob to read the exported index instead
+Failed approach: none
+Verified: make test (703 passed), make lint clean, npm test (11 passed incl. real index.json), npm run build ok; page checked in a browser (table, seed list, LLM table)
+Risk: CI exports site data from the 200-seed eval; the deploy (F4) must use 1000 seeds
+Handoff: human reviews F2
+
+---
+
+## F3 | 2026-10-18 | agent: claude | status: done
+Changed: web/src (Seed.tsx, trace.ts, route.ts, App.tsx, Results.tsx, styles.css, tests), STATE.md, LOG.md
+Decision: merges ARCHITECTURE F4 and the text part of F5; no SVG timeline. Ledger steps come only from executor/reconcile events (INTENDED and EXECUTING are not traced, so not shown); highlighted rows follow the violation detail (named refund for I3/I4, all refunds for I1/I2, all labels for I5, none for I7); the browser re-hashes each JSONL and shows match or mismatch
+Surprise: none
+Failed approach: none
+Verified: npm test (34 passed incl. seed 1: naive 2 refunds, hardened 1 refund via UNKNOWN then reconcile, hash equals README), npm run build ok; checked in a browser at desktop and 390px width
+Risk: none
+Handoff: human reviews F3
+
+---
+
+## F4 | 2026-10-18 | agent: claude | status: done
+Changed: web/e2e/viewer.spec.ts, web/playwright.config.ts, web/package.json, lockfile, tsconfig, .github/workflows/ci.yml, .github/workflows/pages.yml (new), README.md, tests/test_readme.py, docs/DECISIONS.md (pending approval), STATE.md, LOG.md
+Decision: ARCHITECTURE F6. Pages builds from a fresh 1000-seed eval in CI (19s locally), never from committed data. test_readme_has_no_urls allows one more exact URL (the Pages link); logged under Pending approval per Rule 7
+Surprise: a leftover vite preview process held port 4173; stopped it
+Failed approach: none
+Verified: make test (703 passed), make lint clean, npm test (34 passed), npm run e2e (2 passed), both workflow files parse as YAML; neither workflow has run on GitHub yet
+Risk: Pages must be enabled in repo settings (Source: GitHub Actions) or the deploy job fails; the live URL is unverified until then
+Handoff: human reviews F4, merges F1-F4 in order, enables Pages
+
+---
+
+## F5 | 2026-10-18 | agent: claude | status: done
+Changed: web/src (App, Results, Seed, new Sidebar and Timeline, trace.ts tones, styles.css, tests), web/index.html (IBM Plex via Google Fonts), web/e2e, STATE.md, LOG.md
+Decision: human asked for a harness-style UI. ARCHITECTURE F5: static SVG timeline (one strip per runtime, by event index, refunds/labels/faults marked, violation rings), no scrubber or animation. Seed page loads all three traces and checks each hash; removed the now-unused presentRuntimes
+Surprise: none
+Failed approach: first screenshot hit the preview server before it listened; waited for it
+Verified: make test (703 passed), make lint clean, tsc clean, npm test (35 passed), npm run e2e (3 passed); checked overview, seed 1 naive and hardened, expanded event, 390px width in a browser
+Risk: fonts load from Google Fonts at runtime (system fonts as fallback)
+Handoff: human reviews F5

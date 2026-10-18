@@ -58,3 +58,4 @@
 ## Pending approval
 
 (none)
+- Pending approval (F4, Rule 7): test_readme_has_no_urls now also allows exactly one more URL, the GitHub Pages viewer link (https://manojdevarajulu.github.io/CrashProof/), for the live link ARCHITECTURE F6 requires. Every other URL stays banned.

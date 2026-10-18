@@ -143,7 +143,8 @@ def test_readme_has_no_urls() -> None:
         r"\[!\[CI\]\(https://github\.com/ManojDevarajulu/CrashProof/actions/workflows/ci\.yml/badge\.svg\)"
         r"\]\(https://github\.com/ManojDevarajulu/CrashProof/actions/workflows/ci\.yml\)"
     )
-    stripped = re.sub(badge_pattern, "", text)
+    viewer_link = r"\(https://manojdevarajulu\.github\.io/CrashProof/\)"
+    stripped = re.sub(viewer_link, "", re.sub(badge_pattern, "", text))
     assert "http://" not in stripped and "https://" not in stripped
 
 

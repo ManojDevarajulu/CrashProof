@@ -2,10 +2,10 @@
 <!-- Overwrite this whole file at the end of every task. Max 25 lines. -->
 
 Cut: Frontend F1-F6 / Real adapter R1-R5
-Last completed: PR 5 (scope expansion merged to main: AGENTS.md, ARCHITECTURE.md, DECISIONS.md)
-Next task: F1 (make site: export summary.json and ~20 seed replays to web/public/data/)
-Branch: feat/f1-site-exporter
-Last verified: pytest 692 passed, ruff clean, mypy strict clean, CI green on main
+Last completed: F5 harness-style UI: app shell with seed sidebar, runtime pass/fail bars, invariant matrix, three-runtime SVG timeline, ledger step chips, expandable event log
+Next task: awaiting human: review and merge F1-F5, enable Pages (Source: GitHub Actions), approve the README URL exception
+Branch: feat/f5-harness-ui
+Last verified: make test (703 passed), make lint clean, web: vitest 35 passed, playwright 3 passed, vite build ok
 Last make eval (1000 seeds), violating seeds: hardened 0, keyed 631, naive 747
 LLM eval (3 seeds), violating seeds: hardened 0, keyed 2, naive 3 (0 malformed outputs)
 Gate 3: passed; repo pushed to https://github.com/ManojDevarajulu/CrashProof

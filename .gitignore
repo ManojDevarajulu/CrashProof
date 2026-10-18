@@ -9,3 +9,4 @@ results/
 .env
 *.db
 *.egg-info/
+web/public/data/
