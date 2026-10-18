@@ -2,10 +2,10 @@
 <!-- Overwrite this whole file at the end of every task. Max 25 lines. -->
 
 Cut: 2 / 3
-Last completed: Model name alignment: gemini-2.5-flash-lite in cassettes, summary, and docs
-Next task: human review; optionally record remaining seeds up to 50
+Last completed: PR 0: Governance updates (CI in scope, PR workflow in Rule 14, decisions finalized)
+Next task: PR 1: License and "Built on" section
 Branch: main
-Last verified: make test (691 passed), make lint clean, make eval (1000 seeds) + make readme clean
+Last verified: .venv/pytest (691 passed), ruff clean, git push to origin/main clean
 Last make eval (1000 seeds), violating seeds: hardened 0, keyed 631, naive 747
 LLM eval (3 seeds), violating seeds: hardened 0, keyed 2, naive 3 (0 malformed outputs)
 Gate 3: passed in clean WSL clone; repo pushed to https://github.com/ManojDevarajulu/CrashProof
@@ -16,6 +16,6 @@ google-genai==1.20.0 installed in .venv; GeminiClient supports GEMINI_API_KEY an
 Model: gemini-2.5-flash-lite
 Not built: C2-2 (F4 F6 F7 F8)
 Scope change requests pending: none
-Risk: none (3-seed dry run confirmed parseable output format and 0 secret leaks)
+Risk: none
 Note: live calls executed strictly via make record; tests and eval remain 100% offline
 Failed approach: none

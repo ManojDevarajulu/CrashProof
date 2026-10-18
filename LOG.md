@@ -325,3 +325,15 @@ Verified: make test (691 passed), make lint clean, make eval (1000 seeds), make 
 Risk: none
 Handoff: human review
 
+---
+
+## PR 0 | 2026-10-18 | agent: human | status: done
+Changed: AGENTS.md, docs/DECISIONS.md, STATE.md, LOG.md
+Decision: CI moved into scope; Rule 14 updated to feature branch PRs; decisions finalized
+Surprise: none
+Failed approach: none
+Verified: .venv/pytest (691 passed), ruff clean, git push to origin/main clean
+Risk: none
+Handoff: ready for PR 1 (License & Built on) on feature branch
+
+
