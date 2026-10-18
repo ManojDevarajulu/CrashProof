@@ -149,6 +149,13 @@ To inspect a replay, open viewer/index.html in a browser and choose the file res
 - The invariants read world records, the trace order, the approvals log and the ledger; I7 for naive and keyed reads the runtime's own terminal flag.
 - Details: docs/ARCHITECTURE.md and docs/INVARIANTS.md.
 
+### Built on
+
+- Runtime and concurrency: Python 3.12, stdlib sqlite3 (in-memory ledger), single-threaded discrete-event scheduler.
+- Core and config: pydantic v2, PyYAML.
+- Quality and invariants: pytest, ruff, mypy.
+- LLM evaluation: google-genai (used only for offline cassette recording; evals and tests are 100% offline).
+
 
 
 ## Limitations

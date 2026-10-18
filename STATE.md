@@ -2,10 +2,10 @@
 <!-- Overwrite this whole file at the end of every task. Max 25 lines. -->
 
 Cut: 2 / 3
-Last completed: PR 0: Governance updates (CI in scope, PR workflow in Rule 14, decisions finalized)
-Next task: PR 1: License and "Built on" section
-Branch: main
-Last verified: .venv/pytest (691 passed), ruff clean, git push to origin/main clean
+Last completed: PR 1: MIT LICENSE and README Built on subsection (branch fix/license-and-built-on)
+Next task: awaiting human (PR 1 review/merge)
+Branch: fix/license-and-built-on
+Last verified: pytest (691 passed), make lint clean
 Last make eval (1000 seeds), violating seeds: hardened 0, keyed 631, naive 747
 LLM eval (3 seeds), violating seeds: hardened 0, keyed 2, naive 3 (0 malformed outputs)
 Gate 3: passed in clean WSL clone; repo pushed to https://github.com/ManojDevarajulu/CrashProof
