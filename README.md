@@ -84,7 +84,7 @@ One recorded run of one model on a small seed set; not a statistical estimate.
 ### Why idempotency keys are not enough
 
 - **Carrier B ignores keys:** Keyed issues duplicate labels on 112 seeds (I5); hardened looks up by reference before retrying.
-- **Keys ignore policy:** Keyed refunds before return scans in 286 seeds (I3) and exceeds the refund cap without approval in 176 seeds (I4).
+- **Keys ignore policy:** Keyed refunds before scans on 286 seeds (I3) and over refund caps on 176 seeds (I4).
 - **Keys ignore liveness:** Keyed leaves 160 workflows open forever without scan timeouts (I7).
 
 ### Do the checks catch bugs?

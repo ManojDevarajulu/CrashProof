@@ -309,39 +309,43 @@ def _record(
     return status
 
 
-def _report() -> int:
+def _load_summary() -> dict[str, object] | None:
     source = _RESULTS / "summary.json"
     try:
         summary = json.loads(source.read_text(encoding="utf-8"))
     except FileNotFoundError:
         print(f"error: {source} not found; run make eval first")
-        return 2
+        return None
     except json.JSONDecodeError as error:
         print(f"error: {source} is not valid JSON: {error}")
-        return 2
+        return None
     if not isinstance(summary, dict):
         print(f"error: {source} is not a JSON object")
+        return None
+    return summary
+
+
+def _report() -> int:
+    summary = _load_summary()
+    if summary is None:
         return 2
     path = _RESULTS / "summary.md"
     path.write_bytes(build_report(summary).encode("utf-8"))
-    readme_path = _RESULTS / "summary_readme.md"
-    readme_path.write_bytes(build_readme_report(summary).encode("utf-8"))
     print(path)
     return 0
 
 
 def _readme() -> int:
     readme = Path("README.md")
-    report = _RESULTS / "summary_readme.md"
-    if not report.is_file():
-        report = _RESULTS / "summary.md"
-    for path in (readme, report):
-        if not path.is_file():
-            print(f"error: {path} not found")
-            return 2
+    if not readme.is_file():
+        print(f"error: {readme} not found")
+        return 2
+    summary = _load_summary()
+    if summary is None:
+        return 2
     try:
         spliced = splice_results(
-            readme.read_text(encoding="utf-8"), report.read_text(encoding="utf-8")
+            readme.read_text(encoding="utf-8"), build_readme_report(summary)
         )
     except ValueError as error:
         print(f"error: {readme}: {error}")

@@ -396,3 +396,15 @@ Handoff: portfolio ready for Pango review
 
 
 
+
+---
+
+## PR 2 (tasks 2.1-2.4) | 2026-10-18 | agent: claude | status: done
+Changed: src/crashproof/cli.py, tests/test_readme.py, README.md, STATE.md, LOG.md
+Decision: 2.1 and 2.2 were already on main; make readme now builds from summary.json via build_readme_report, so results/summary_readme.md is no longer read
+Surprise: the three CLI readme tests used summary.md as input; their fixtures now write a minimal summary.json
+Failed approach: shell-escaped edits corrupted "
+" literals twice; fixed with the Edit tool
+Verified: make test (692 passed), make lint clean, make readme clean
+Risk: none
+Handoff: human reviews PR 2
