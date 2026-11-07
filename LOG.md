@@ -507,3 +507,14 @@ Failed approach: appended scan-test code first had real newlines inside string l
 Verified: make test (766 passed), make lint clean; 3 hand-made breaks of the adapter (no Idempotency-Key header, live keys accepted, 5xx as definite failure) each failed 2-4 tests; 3000 trace hashes and the 1000-seed summary.json and failures.json hashes identical to the pre-R1 baseline
 Risk: never run against Stripe; fake responses are our model of documented behaviour, not recordings (R4 replaces them)
 Handoff: human reviews R3
+
+---
+
+## R4a | 2026-11-07 | agent: claude | status: done
+Changed: src/crashproof/adapters/stripe_refunds.py (create_test_payment_intent, RecordingTransport, record_contract, RecordingError), src/crashproof/cli.py (record-stripe), Makefile (record-stripe), tests/test_stripe_record.py (new), docs/DECISIONS.md (R4 recorder entry appended), STATE.md, LOG.md
+Decision: R4 split in two because contract tests must match what Stripe really returns; 4a builds the recorder and runs it only against a fake, the human records once, 4b writes contract tests from the file. The recording stores status and body only, drops Authorization, scrubs client_secret, and is refused if any key-like text remains; the CLI never overwrites an existing recording; I ran the command only with STRIPE_API_KEY unset (exit 2, no network)
+Surprise: bash heredocs failed twice on quoting; used a patch script file instead. Branch is stacked on R3 because R3 is not merged
+Failed approach: recorder first swallowed a failed setup step and continued with an empty PaymentIntent id; test caught it
+Verified: make test (778 passed), make lint clean; 3000 trace hashes and the 1000-seed summary.json and failures.json hashes identical to the baseline; make record-stripe with no key exits 2 and writes nothing
+Risk: never run against real Stripe; no response headers recorded
+Handoff: human merges R3, runs make record-stripe once, then R4b

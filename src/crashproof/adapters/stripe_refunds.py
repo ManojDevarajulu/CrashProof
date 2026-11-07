@@ -15,12 +15,14 @@ How the protocol maps onto Stripe:
 """
 
 import json
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from crashproof.models import Json
 from crashproof.world.carriers import IdempotencyConflict
 from crashproof.world.faults import Timeout
 from crashproof.world.refunds import InvalidRefundAmount, RefundRecord
@@ -28,10 +30,17 @@ from crashproof.world.refunds import InvalidRefundAmount, RefundRecord
 API_BASE = "https://api.stripe.com/v1"
 KEY_PREFIX = "sk_test_"
 _PAGE_SIZE = "100"
+_CHARGE_AMOUNT = 2000
+_SECRET_PATTERN = re.compile(r"\b(?:sk|rk)_(?:test|live)_[A-Za-z0-9]+|_secret_")
+_CLIENT_SECRET = re.compile(r'("client_secret"\s*:\s*)"[^"]*"')
 
 
 class LiveKeyRejected(ValueError):
     """The API key is not a test-mode secret key."""
+
+
+class RecordingError(Exception):
+    """A recording was refused because it would contain a secret."""
 
 
 class StripeApiError(Exception):
@@ -223,3 +232,146 @@ def _ours(refund: dict[str, object]) -> RefundRecord | None:
         idempotency_key=key if isinstance(key, str) else None,
         created_vt=created,
     )
+
+
+def create_test_payment_intent(
+    api_key: str, amount: int, transport: Transport = urllib_transport
+) -> str:
+    """Create and confirm a PaymentIntent with Stripe's test card; return its id."""
+    if not api_key.startswith(KEY_PREFIX):
+        raise LiveKeyRejected(f"only {KEY_PREFIX}... test keys are accepted")
+    fields = [
+        ("amount", str(amount)),
+        ("currency", "usd"),
+        ("payment_method", "pm_card_visa"),
+        ("confirm", "true"),
+        ("automatic_payment_methods[enabled]", "true"),
+        ("automatic_payment_methods[allow_redirects]", "never"),
+    ]
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    body = urllib.parse.urlencode(fields).encode()
+    reply = transport(HttpRequest("POST", f"{API_BASE}/payment_intents", headers, body))
+    payment_intent = _checked(reply)
+    intent_id = payment_intent.get("id")
+    if payment_intent.get("status") != "succeeded" or not isinstance(intent_id, str):
+        raise StripeApiError("the test PaymentIntent did not succeed")
+    return intent_id
+
+
+class RecordingTransport:
+    """Wraps a transport and keeps each exchange, without the Authorization header."""
+
+    def __init__(self, inner: Transport) -> None:
+        self._inner = inner
+        self._exchanges: list[Json] = []
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        entry: dict[str, Json] = {"request": _request_json(request)}
+        try:
+            reply = self._inner(request)
+        except Timeout:
+            entry["response"] = None
+            entry["error"] = "Timeout"
+            self._exchanges.append(entry)
+            raise
+        text = _CLIENT_SECRET.sub(r'\1"scrubbed"', reply.body.decode("utf-8"))
+        entry["response"] = {"status": reply.status, "body": text}
+        self._exchanges.append(entry)
+        return reply
+
+    def take(self) -> list[Json]:
+        taken, self._exchanges = self._exchanges, []
+        return taken
+
+
+def _request_json(request: HttpRequest) -> dict[str, Json]:
+    headers: dict[str, Json] = {
+        name: value
+        for name, value in request.headers.items()
+        if name != "Authorization"
+    }
+    body = None if request.body is None else request.body.decode("utf-8")
+    return {
+        "method": request.method,
+        "url": request.url,
+        "headers": headers,
+        "body": body,
+    }
+
+
+def record_contract(
+    api_key: str, transport: Transport = urllib_transport
+) -> dict[str, Json]:
+    """Run the fixed scenario against Stripe test mode and return what was exchanged.
+
+    Only the human runs this, through `make record-stripe`. A step that ends in a
+    mapped error is data, not a failure; the error name is stored as its outcome.
+    """
+    recorder = RecordingTransport(transport)
+    steps: list[Json] = []
+    intent = create_test_payment_intent(api_key, _CHARGE_AMOUNT, recorder)
+    steps.append(
+        {"name": "create_payment_intent", "outcome": "ok", "exchanges": recorder.take()}
+    )
+    reference = f"wf-{intent}"
+    key = f"key-{intent}"
+    provider = StripeRefunds(api_key, intent, recorder)
+    unknown = StripeRefunds(api_key, "pi_does_not_exist", recorder)
+
+    def refund(amount: int, ref: str, idem: str | None) -> Callable[[], object]:
+        return lambda: provider.issue_refund(
+            "order-1", amount, ref, idempotency_key=idem
+        )
+
+    scenario: list[tuple[str, Callable[[], object]]] = [
+        ("refund", refund(700, reference, key)),
+        ("refund_replay", refund(700, reference, key)),
+        ("refund_key_reused_with_other_amount", refund(800, reference, key)),
+        ("refund_unkeyed_first", refund(100, reference, None)),
+        ("refund_unkeyed_second", refund(100, reference, None)),
+        ("lookup_by_key", lambda: provider.get_by_key(key)),
+        ("lookup_missing_key", lambda: provider.get_by_key("key-missing")),
+        ("lookup_by_reference", lambda: provider.get_by_reference(reference)),
+        (
+            "refund_more_than_charged",
+            refund(_CHARGE_AMOUNT * 5, f"{reference}-b", f"{key}-b"),
+        ),
+        (
+            "refund_unknown_payment_intent",
+            lambda: unknown.issue_refund(
+                "order-1", 100, reference, idempotency_key=f"{key}-c"
+            ),
+        ),
+    ]
+    for name, call in scenario:
+        _recorded(steps, recorder, name, call)
+    recording: dict[str, Json] = {
+        "inputs": {"payment_intent": intent, "reference": reference, "key": key},
+        "steps": steps,
+    }
+    _refuse_secrets(recording, api_key)
+    return recording
+
+
+def _recorded(
+    steps: list[Json],
+    recorder: RecordingTransport,
+    name: str,
+    call: Callable[[], object],
+) -> None:
+    """Run one scenario step and append it; a mapped error becomes its outcome."""
+    outcome = "ok"
+    try:
+        call()
+    except (IdempotencyConflict, InvalidRefundAmount, StripeApiError, Timeout) as exc:
+        outcome = type(exc).__name__
+    steps.append({"name": name, "outcome": outcome, "exchanges": recorder.take()})
+
+
+def _refuse_secrets(recording: dict[str, Json], api_key: str) -> None:
+    text = json.dumps(recording)
+    if api_key in text or _SECRET_PATTERN.search(text):
+        raise RecordingError("the recording would contain a key or client secret")
