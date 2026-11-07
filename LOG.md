@@ -518,3 +518,14 @@ Failed approach: recorder first swallowed a failed setup step and continued with
 Verified: make test (778 passed), make lint clean; 3000 trace hashes and the 1000-seed summary.json and failures.json hashes identical to the baseline; make record-stripe with no key exits 2 and writes nothing
 Risk: never run against real Stripe; no response headers recorded
 Handoff: human merges R3, runs make record-stripe once, then R4b
+
+---
+
+## P1 | 2026-11-07 | agent: claude | status: done
+Changed: docs/DECISIONS.md (C1 and A1 scope change requests, suggested order, and a Pending approval entry for the protected files), STATE.md, LOG.md
+Decision: C1 concurrency and A1 async refund lifecycle recorded as proposals only; no code, no protected file touched. Executor interleaving is left as a C1-0 design note for the human to review. The Pending approval entry lists the ARCHITECTURE, INVARIANTS and SPEC edits the human must make, including amending I1 so a failed refund followed by a retry is not a duplicate
+Surprise: none
+Failed approach: none
+Verified: make test (778 passed), make lint clean; docs-only change
+Risk: neither plan has been approved; Stripe test inputs for pending or failed refunds are unchecked
+Handoff: human reviews the plan, then R4b and R5 come first
