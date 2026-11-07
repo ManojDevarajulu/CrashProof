@@ -53,6 +53,7 @@
 - CI workflow (.github/workflows/ci.yml) and test_readme_has_no_urls exception for GitHub Actions workflow badge and run URL approved by human.
 - Interactive React + TypeScript trace viewer in `web/` (Vite, Vitest, Playwright) deployed to GitHub Pages via existing CI; `make site` export target for static simulation replays and summary (approved).
 - One real provider adapter: Stripe test-mode refunds behind a `RefundProvider` protocol that the simulated refund service also implements (approved).
+- Mutation testing (task M1, approved by human): `tests/test_mutants.py` runs the hardened runtime on seeds 1..300 with one deliberate bug at a time, applied by monkeypatch (no change to `src/`, no new dependency), and asserts the designated invariants fire; a control test asserts 0 violations unpatched. Survivors are allowed only on an explicit in-file list with a reason (M6, the end-of-run reconcile). Adds a `make mutate` target and one CI step. If a mutant needs a seam in `src/`, stop and ask.
 
 
 ## Pending approval

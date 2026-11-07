@@ -30,6 +30,9 @@ jobs:
       - name: Run test suite
         run: make test
 
+      - name: Run mutation tests
+        run: make mutate
+
       - name: Run 200-seed simulation evaluation
         run: make eval SEEDS=200
 
