@@ -28,7 +28,7 @@ from crashproof.sim.trace import TraceRecorder
 from crashproof.world.carriers import LabelProvider
 from crashproof.world.events import EventBus, WorldEvent
 from crashproof.world.faults import FaultInjector
-from crashproof.world.refunds import RefundService
+from crashproof.world.refunds import RefundProvider
 from crashproof.world.store import OrderNotFound, Store
 
 type WorkflowState = Literal[
@@ -175,7 +175,7 @@ class HardenedRuntime:
         *,
         store: Store,
         carrier: LabelProvider,
-        refunds: RefundService,
+        refunds: RefundProvider,
         bus: EventBus,
         trace: TraceRecorder,
         clock: Clock,

@@ -18,7 +18,7 @@ from crashproof.sim.trace import TraceRecorder
 from crashproof.world.carriers import IdempotencyConflict, LabelProvider, LabelResult
 from crashproof.world.events import EventBus, WorldEvent
 from crashproof.world.faults import FaultInjector, Timeout
-from crashproof.world.refunds import InvalidRefundAmount, RefundRecord, RefundService
+from crashproof.world.refunds import InvalidRefundAmount, RefundProvider, RefundRecord
 from crashproof.world.store import OrderNotFound, Store
 
 
@@ -36,7 +36,7 @@ class NaiveRuntime:
         *,
         store: Store,
         carrier: LabelProvider,
-        refunds: RefundService,
+        refunds: RefundProvider,
         bus: EventBus,
         trace: TraceRecorder,
         clock: Clock,
