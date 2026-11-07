@@ -1,20 +1,19 @@
 # STATE.md
 <!-- Overwrite this whole file at the end of every task. Max 25 lines. -->
 
-Cut: Frontend F1-F6 / Real adapter R1-R5 / Mutation testing M1
-Last completed: M1 mutation tests: tests/test_mutants.py, make mutate, CI step
-Next task: awaiting human: review M1 (branch feat/m1-mutation); F1-F5 still awaiting merge, Pages not yet enabled, README URL exception not yet approved
-Branch: feat/m1-mutation (based on main)
-Last verified: make test (716 passed), make lint clean, make mutate (13 passed in 13s); web and e2e not rerun this task
-Mutants (hardened, seeds 1..300): killed M1 M2 M3 M4 M5 M7 M9 M10 by invariants, M8 by LedgerError; survive M6 M11 M12 (documented in SURVIVORS)
+Cut: Frontend F1-F6 / Real adapter R1-R5
+Last completed: R1 RefundProvider protocol in world/refunds.py; executor, naive, reconcile and workflow depend on it
+Next task: awaiting human: review R1 (branch feat/r1-refund-provider); then R2 file-backed ledger (plan agreed: open_ledger with autocommit, optional ledger_path in run_seed)
+Branch: feat/r1-refund-provider (based on main after M1 merge, PR #7)
+Last verified: make test (721 passed), make lint clean; web and e2e not rerun this task
+Byte-identity: trace_hash for naive, keyed, hardened on seeds 1..1000 (3000 hashes) identical before and after; sha256 of summary.json and failures.json from a 1000-seed eval identical
 Last make eval (1000 seeds), violating seeds: hardened 0, keyed 631, naive 747
+Mutation tests: make mutate, 13 tests (M1 merged); killed M1 M2 M3 M4 M5 M7 M9 M10 by invariants, M8 by LedgerError, survive M6 M11 M12
 LLM eval (3 seeds), violating seeds: hardened 0, keyed 2, naive 3 (0 malformed outputs)
 Gate 3: passed; repo pushed to https://github.com/ManojDevarajulu/CrashProof
 Frozen (do not touch): scenario_config.yaml, policy_rules.yaml, LLM prompt (build_prompt)
-Cassettes: tests/cassettes/ (seed-0001..0003.json + _record_summary.json)
 Model: gemini-2.5-flash-lite
-Not built: C2-2 (F4 F6 F7 F8), R1-R5
-Scope change requests pending: none (M1 appended to DECISIONS.md and approved by human)
-Risk: M10 is killed by 1 of 300 seeds, so it is a thin kill; M8 is caught by a ledger guard, not an invariant
-Note: src/ unchanged by M1
-Failed approach: first M2 changed the ledger key per call and crashed the harness (illegal workflow transition); replaced with a per-attempt provider key
+Not built: C2-2 (F4 F6 F7 F8), R2-R5
+Scope change requests pending: none (F1-F6, R1-R5 and M1 approved)
+Risk: none; protocol error contract (InvalidRefundAmount, IdempotencyConflict, faults.Timeout) is documented but only the simulated service and a test fake implement it
+Failed approach: first protocol edit missed the import because refunds.py had CRLF endings; normalised to LF

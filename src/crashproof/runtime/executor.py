@@ -11,7 +11,7 @@ from crashproof.runtime.policy import PolicyEngine, PolicyVerdict
 from crashproof.sim.trace import TraceRecorder
 from crashproof.world.carriers import IdempotencyConflict, LabelProvider
 from crashproof.world.faults import CrashPoint, FaultInjector, Timeout
-from crashproof.world.refunds import InvalidRefundAmount, RefundService
+from crashproof.world.refunds import InvalidRefundAmount, RefundProvider
 
 _LOGICAL_STEP: dict[EffectType, str] = {
     "create_label": "label",
@@ -52,7 +52,7 @@ class Executor:
         self,
         ledger: Ledger,
         carrier: LabelProvider,
-        refunds: RefundService,
+        refunds: RefundProvider,
         faults: FaultInjector | None,
         trace: TraceRecorder,
         clock: Clock,

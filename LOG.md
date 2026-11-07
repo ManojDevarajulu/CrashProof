@@ -474,3 +474,14 @@ Failed approach: first M2 varied the ledger key per call and crashed the run wit
 Verified: make test (716 passed), make lint clean, make mutate (13 passed); 8 mutants killed by invariants, 1 by LedgerError, 3 survive (M6 M11 M12)
 Risk: M10 is killed by 1 of 300 seeds; CI step is unrun on GitHub
 Handoff: human reviews M1
+
+---
+
+## R1 | 2026-11-07 | agent: claude | status: done
+Changed: src/crashproof/world/refunds.py (RefundProvider protocol), runtime/executor.py, naive.py, reconcile.py, workflow.py (type annotations only), tests/test_refund_provider.py (new), STATE.md, LOG.md
+Decision: protocol has issue_refund, get_by_key, get_by_reference and is runtime_checkable; the refunds property the invariant checkers read stays on RefundService, since the oracle reads the simulator; the error contract is in the docstring
+Surprise: refunds.py had CRLF endings in the working copy, which broke a string replace; normalised to LF (.gitattributes enforces LF). The M1 merge (PR #7) was already on main, so the baseline was 716 tests
+Failed approach: none beyond the CRLF miss
+Verified: make test (721 passed), make lint clean; 3000 trace hashes (3 runtimes x seeds 1..1000) identical before and after; sha256 of results/summary.json and failures.json identical after a 1000-seed eval
+Risk: none
+Handoff: human reviews R1

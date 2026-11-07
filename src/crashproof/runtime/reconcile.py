@@ -6,7 +6,7 @@ from crashproof.runtime.executor import Reconciler
 from crashproof.runtime.ledger import EffectRow, Ledger, LedgerError
 from crashproof.sim.trace import TraceRecorder
 from crashproof.world.carriers import LabelProvider
-from crashproof.world.refunds import RefundService
+from crashproof.world.refunds import RefundProvider
 
 _NOT_APPLIED: dict[str, Json] = {"error": "not_applied"}
 
@@ -14,7 +14,7 @@ _NOT_APPLIED: dict[str, Json] = {"error": "not_applied"}
 def make_reconciler(
     ledger: Ledger,
     carrier: LabelProvider,
-    refunds: RefundService,
+    refunds: RefundProvider,
     trace: TraceRecorder,
     clock: Clock,
 ) -> Reconciler:
@@ -58,7 +58,7 @@ def reconcile_workflow(workflow_id: str, ledger: Ledger, reconciler: Reconciler)
 
 
 def _lookup(
-    row: EffectRow, carrier: LabelProvider, refunds: RefundService
+    row: EffectRow, carrier: LabelProvider, refunds: RefundProvider
 ) -> dict[str, Json] | None:
     if row.effect_type == "issue_refund":
         refund = refunds.get_by_key(row.idempotency_key)

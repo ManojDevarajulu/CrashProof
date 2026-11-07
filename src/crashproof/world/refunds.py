@@ -1,3 +1,5 @@
+from typing import Protocol, runtime_checkable
+
 from pydantic import BaseModel, ConfigDict
 
 from crashproof.clock import Clock
@@ -21,6 +23,32 @@ class RefundRecord(BaseModel):
     reference: str
     idempotency_key: str | None
     created_vt: int
+
+
+@runtime_checkable
+class RefundProvider(Protocol):
+    """What the runtimes need from a refund backend, simulated or real.
+
+    issue_refund with a key applies at most once per key and returns the original
+    record on a repeat. Errors an implementation must raise: InvalidRefundAmount
+    for a non-positive or non-int amount; IdempotencyConflict when a key is reused
+    with a different request; faults.Timeout when the outcome is unknown, whether
+    or not the refund was applied. get_by_key returns None when nothing was applied
+    under that key. get_by_reference returns refunds in creation order.
+    """
+
+    def issue_refund(
+        self,
+        order_id: str,
+        amount: int,
+        reference: str,
+        *,
+        idempotency_key: str | None = None,
+    ) -> RefundRecord: ...
+
+    def get_by_key(self, key: str) -> RefundRecord | None: ...
+
+    def get_by_reference(self, reference: str) -> tuple[RefundRecord, ...]: ...
 
 
 class RefundService:
