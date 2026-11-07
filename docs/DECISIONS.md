@@ -54,6 +54,7 @@
 - Interactive React + TypeScript trace viewer in `web/` (Vite, Vitest, Playwright) deployed to GitHub Pages via existing CI; `make site` export target for static simulation replays and summary (approved).
 - One real provider adapter: Stripe test-mode refunds behind a `RefundProvider` protocol that the simulated refund service also implements (approved).
 - Mutation testing (task M1, approved by human): `tests/test_mutants.py` runs the hardened runtime on seeds 1..300 with one deliberate bug at a time, applied by monkeypatch (no change to `src/`, no new dependency), and asserts the designated invariants fire; a control test asserts 0 violations unpatched. Survivors are allowed only on an explicit in-file list with a reason (M6, the end-of-run reconcile). Adds a `make mutate` target and one CI step. If a mutant needs a seam in `src/`, stop and ask.
+- R4 recorder (human-run, live, test key only): `make record-stripe` creates a test PaymentIntent with the test card, runs a fixed refund scenario against Stripe test mode through the adapter, and writes `tests/contracts/stripe_refunds.json` (status and body only, no Authorization header, `client_secret` scrubbed; refused if any key-like text remains). It never overwrites an existing recording. Contract tests then replay that file offline. Same network exemption as the adapter. Agent never runs it.
 
 
 ## Pending approval

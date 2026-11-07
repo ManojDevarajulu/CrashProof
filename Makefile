@@ -22,7 +22,7 @@ SEED ?= 1
 RECORD_SEEDS ?= 3
 RUNTIME ?= hardened
 
-.PHONY: setup test lint eval replay report readme record site mutate
+.PHONY: setup test lint eval replay report readme record site mutate record-stripe
 
 setup:
 	$(VENV)
@@ -56,3 +56,6 @@ site:
 
 mutate:
 	$(PYTEST_BIN) tests/test_mutants.py -q -s
+
+record-stripe:
+	$(PYTHON_BIN) -m crashproof.cli record-stripe

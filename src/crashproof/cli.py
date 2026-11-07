@@ -1,10 +1,19 @@
 import argparse
 import json
-from collections.abc import Sequence
+import os
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast, get_args
 
+from crashproof.adapters.stripe_refunds import (
+    LiveKeyRejected,
+    RecordingError,
+    StripeApiError,
+    Transport,
+    record_contract,
+    urllib_transport,
+)
 from crashproof.agent.llm import (
     LLM_MODEL_ID,
     MAX_RECORD_SEEDS,
@@ -36,6 +45,7 @@ from crashproof.sim.runner import (
     run_seed,
 )
 from crashproof.sim.scenario import Scenario
+from crashproof.world.faults import Timeout
 
 _INVARIANTS = ("I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9")
 _RESULTS = Path("results")
@@ -43,6 +53,7 @@ _SITE_DATA = Path("web/public/data")
 _SITE_SEED_LIMIT = 20
 _SITE_RUNTIMES: tuple[RuntimeKind, ...] = ("naive", "keyed", "hardened")
 _CASSETTES = Path("tests/cassettes")
+_STRIPE_CONTRACT = Path("tests/contracts/stripe_refunds.json")
 _RECORD_SUMMARY = "_record_summary.json"
 _ENDED = (
     "ended_by_malformed_output",
@@ -92,6 +103,9 @@ def _parser() -> argparse.ArgumentParser:
     rp.add_argument("--runtime", choices=get_args(RuntimeKind.__value__), required=True)
     rec = sub.add_parser("record", help="record LLM cassettes (human only, live)")
     rec.add_argument("--seeds", type=_record_seeds, required=True)
+    sub.add_parser(
+        "record-stripe", help="record Stripe test-mode responses (human only, live)"
+    )
     sub.add_parser("report", help="write results/summary.md from results/summary.json")
     sub.add_parser("readme", help="splice results/summary.md into README.md")
     sub.add_parser("site", help="export summary and seed replays to web/public/data")
@@ -435,12 +449,34 @@ def _site(config: ScenarioConfig) -> int:
     return 0
 
 
+def _record_stripe(out: Path, environ: Mapping[str, str], transport: Transport) -> int:
+    key = environ.get("STRIPE_API_KEY")
+    if not key:
+        print("error: set STRIPE_API_KEY to a sk_test_ key")
+        return 2
+    if out.exists():
+        print(f"error: {out} already exists; delete it to record again")
+        return 2
+    try:
+        recording = record_contract(key, transport)
+    except (LiveKeyRejected, RecordingError, StripeApiError, Timeout) as error:
+        print(f"error: {error}")
+        return 2
+    out.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(recording, indent=2, sort_keys=True) + "\n"
+    out.write_text(text, encoding="utf-8", newline="\n")
+    print(f"wrote {out}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "report":
         return _report()
     if args.command == "readme":
         return _readme()
+    if args.command == "record-stripe":
+        return _record_stripe(_STRIPE_CONTRACT, os.environ, urllib_transport)
     config = load_scenario_config()
     if args.command == "record":
         budget = CallBudget()
