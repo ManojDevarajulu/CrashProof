@@ -496,3 +496,14 @@ Failed approach: none
 Verified: make test (726 passed), make lint clean; 3000 trace hashes and the 1000-seed summary.json and failures.json hashes identical to the pre-R1 baseline; 20 seeds file vs memory trace_hash equal; a plain sqlite connection does not show the write to a second reader, open_ledger does
 Risk: suite is slower today (about 50s vs 20s) across unrelated tests; no real process kill tested until R5
 Handoff: human reviews R2
+
+---
+
+## R3 | 2026-11-07 | agent: claude | status: done
+Changed: src/crashproof/adapters/__init__.py and stripe_refunds.py (new), tests/test_stripe_refunds.py (new), tests/test_no_nondeterminism.py (network exemption now a set of two paths, plus 2 scoping tests), STATE.md, LOG.md
+Decision: urllib transport is injectable, so every test runs without network or a key; only sk_test_ keys are accepted and the key is never in repr or errors; 429, 5xx and network failures raise faults.Timeout (outcome unknown, so the executor reconciles); lookups list the PaymentIntent refunds and filter metadata (reference, order_id, idempotency_key); the scan exemption for the adapter was already approved in DECISIONS.md
+Surprise: my edits landed on main again because the human merged R2 (PR #9) and switched branches; moved them with git checkout -B before committing
+Failed approach: appended scan-test code first had real newlines inside string literals; rewritten
+Verified: make test (766 passed), make lint clean; 3 hand-made breaks of the adapter (no Idempotency-Key header, live keys accepted, 5xx as definite failure) each failed 2-4 tests; 3000 trace hashes and the 1000-seed summary.json and failures.json hashes identical to the pre-R1 baseline
+Risk: never run against Stripe; fake responses are our model of documented behaviour, not recordings (R4 replaces them)
+Handoff: human reviews R3
