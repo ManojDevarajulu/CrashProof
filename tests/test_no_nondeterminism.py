@@ -49,7 +49,9 @@ NETWORK_MODULES = {
 }
 # Exact (relative path, rule) exemptions required by AGENTS.md Rule 4.
 RANDOM_CLASS_EXEMPT = "crashproof/rng.py"
-NETWORK_EXEMPT = "crashproof/agent/llm.py"
+NETWORK_EXEMPT = frozenset(
+    {"crashproof/agent/llm.py", "crashproof/adapters/stripe_refunds.py"}
+)
 
 
 def _matches_module(name: str, module: str) -> bool:
@@ -59,7 +61,7 @@ def _matches_module(name: str, module: str) -> bool:
 def _banned_module(name: str, rel_path: str) -> str | None:
     for module in sorted(BANNED_MODULES):
         if _matches_module(name, module):
-            if rel_path == NETWORK_EXEMPT and module in NETWORK_MODULES:
+            if rel_path in NETWORK_EXEMPT and module in NETWORK_MODULES:
                 return None
             return module
     return None
@@ -208,3 +210,16 @@ def test_llm_network_exemption_is_scoped_to_that_path() -> None:
 def test_llm_exemption_does_not_cover_other_rules() -> None:
     assert scan_source("import time\ntime.time()\n", "crashproof/agent/llm.py")
     assert scan_source("import threading\n", "crashproof/agent/llm.py")
+
+
+def test_stripe_adapter_network_exemption_is_scoped_to_that_path() -> None:
+    path = "crashproof/adapters/stripe_refunds.py"
+    assert scan_source("import urllib.request\n", path) == []
+    assert scan_source("import urllib.request\n", "crashproof/adapters/other.py")
+
+
+def test_stripe_adapter_exemption_does_not_cover_other_rules() -> None:
+    path = "crashproof/adapters/stripe_refunds.py"
+    assert scan_source("import time\ntime.sleep(1)\n", path)
+    assert scan_source("import threading\n", path)
+    assert scan_source("import random\nrandom.random()\n", path)
