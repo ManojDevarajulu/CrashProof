@@ -3,6 +3,7 @@ from collections.abc import Callable
 from contextlib import ExitStack, closing
 from dataclasses import dataclass, field
 from functools import partial
+from pathlib import Path
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
@@ -16,7 +17,7 @@ from crashproof.models import Json
 from crashproof.rng import Rng
 from crashproof.runtime.executor import Reconciler
 from crashproof.runtime.keyed import KeyedRuntime
-from crashproof.runtime.ledger import Ledger
+from crashproof.runtime.ledger import Ledger, connect_file
 from crashproof.runtime.naive import NaiveRuntime
 from crashproof.runtime.policy import ApprovalLog, SimulatedApprover
 from crashproof.runtime.reconcile import make_reconciler, reconcile_workflow
@@ -321,6 +322,16 @@ def _workflow_terminal(h: _Harness) -> dict[str, bool]:
     return {workflow_id: all(slot.is_terminal for slot in h.slots)}
 
 
+def _ledger_connection(path: Path | None) -> sqlite3.Connection:
+    if path is None:
+        return sqlite3.connect(":memory:")
+    if path.exists():
+        raise FileExistsError(
+            f"ledger file {path} already exists; a run needs a fresh one"
+        )
+    return connect_file(path)
+
+
 def run_seed(
     seed: int,
     kind: RuntimeKind,
@@ -328,6 +339,7 @@ def run_seed(
     policy_config: PolicyConfig | None = None,
     *,
     agent_factory: AgentFactory = scripted_agent,
+    ledger_path: Path | None = None,
 ) -> RunResult:
     with ExitStack() as stack:
         h = _build_harness(seed, config)
@@ -336,7 +348,7 @@ def run_seed(
             h, seed, load_policy_config() if policy_config is None else policy_config
         )
         if kind == "hardened":
-            conn = stack.enter_context(closing(sqlite3.connect(":memory:")))
+            conn = stack.enter_context(closing(_ledger_connection(ledger_path)))
             _add_ledger(h, conn)
         scenario = h.scenario
         h.trace.record(

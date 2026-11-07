@@ -485,3 +485,14 @@ Failed approach: none beyond the CRLF miss
 Verified: make test (721 passed), make lint clean; 3000 trace hashes (3 runtimes x seeds 1..1000) identical before and after; sha256 of results/summary.json and failures.json identical after a 1000-seed eval
 Risk: none
 Handoff: human reviews R1
+
+---
+
+## R2 | 2026-11-07 | agent: claude | status: done
+Changed: src/crashproof/runtime/ledger.py (connect_file, open_ledger, Ledger.close), src/crashproof/sim/runner.py (ledger_path on run_seed), tests/test_ledger_file.py (new), STATE.md, LOG.md
+Decision: durability comes from isolation_level=None (autocommit), since Ledger never committed; run_seed refuses an existing ledger file (FileExistsError) so a stale file cannot be reused silently, while open_ledger reopens one for the R5 restart; the in-memory default is untouched
+Surprise: my edits landed on main because the human merged R1 (PR #8) and switched branches mid-task; moved them onto feat/r2-file-ledger with git checkout -B before committing (that branch held no commits of mine)
+Failed approach: none
+Verified: make test (726 passed), make lint clean; 3000 trace hashes and the 1000-seed summary.json and failures.json hashes identical to the pre-R1 baseline; 20 seeds file vs memory trace_hash equal; a plain sqlite connection does not show the write to a second reader, open_ledger does
+Risk: suite is slower today (about 50s vs 20s) across unrelated tests; no real process kill tested until R5
+Handoff: human reviews R2

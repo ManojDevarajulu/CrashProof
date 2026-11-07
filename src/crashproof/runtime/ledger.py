@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -100,6 +101,9 @@ class Ledger:
             " effect_key TEXT NOT NULL, rule_id TEXT NOT NULL,"
             " allowed INTEGER NOT NULL, reason TEXT NOT NULL, vt INTEGER NOT NULL)"
         )
+
+    def close(self) -> None:
+        self._conn.close()
 
     def insert_intended(
         self,
@@ -306,3 +310,17 @@ def _effect_row(found: tuple[Any, ...]) -> EffectRow:
         created_vt=found[9],
         updated_vt=found[10],
     )
+
+
+def connect_file(path: Path) -> sqlite3.Connection:
+    """Open a ledger database on disk where every statement is committed at once.
+
+    sqlite3 normally holds writes in an open transaction, which a killed process
+    loses. Autocommit means a row written before a crash is there after it.
+    """
+    return sqlite3.connect(path, isolation_level=None)
+
+
+def open_ledger(path: Path, clock: Clock) -> Ledger:
+    """Open or create a durable ledger. An existing file keeps its rows."""
+    return Ledger(connect_file(path), clock)
