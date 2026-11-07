@@ -22,7 +22,7 @@ SEED ?= 1
 RECORD_SEEDS ?= 3
 RUNTIME ?= hardened
 
-.PHONY: setup test lint eval replay report readme record site
+.PHONY: setup test lint eval replay report readme record site mutate
 
 setup:
 	$(VENV)
@@ -53,3 +53,6 @@ record:
 
 site:
 	$(PYTHON_BIN) -m crashproof.cli site
+
+mutate:
+	$(PYTEST_BIN) tests/test_mutants.py -q -s

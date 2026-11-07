@@ -463,3 +463,14 @@ Failed approach: first screenshot hit the preview server before it listened; wai
 Verified: make test (703 passed), make lint clean, tsc clean, npm test (35 passed), npm run e2e (3 passed); checked overview, seed 1 naive and hardened, expanded event, 390px width in a browser
 Risk: fonts load from Google Fonts at runtime (system fonts as fallback)
 Handoff: human reviews F5
+
+---
+
+## M1 | 2026-11-07 | agent: claude | status: done
+Changed: tests/test_mutants.py (new), Makefile (mutate target), .github/workflows/ci.yml (mutation step), docs/DECISIONS.md (scope change appended), STATE.md, LOG.md
+Decision: mutants are monkeypatches, so src/ is untouched and no dependency is added; no pytest marker, the file runs under make test and make mutate. A control run must show 0 violations
+Surprise: M1-M5 reproduce the recorded S1-S5 counts exactly (19/19/189, 19/19/15/189, 46, 32, 34); M7 fires I5 only (refund keys mask it), not I8 as first expected; M8 is stopped by a LedgerError guard, not an invariant; P1 and P5 mutants survive
+Failed approach: first M2 varied the ledger key per call and crashed the run with an illegal workflow transition
+Verified: make test (716 passed), make lint clean, make mutate (13 passed); 8 mutants killed by invariants, 1 by LedgerError, 3 survive (M6 M11 M12)
+Risk: M10 is killed by 1 of 300 seeds; CI step is unrun on GitHub
+Handoff: human reviews M1
